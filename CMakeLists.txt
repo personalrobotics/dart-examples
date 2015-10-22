@@ -15,8 +15,8 @@ include_directories(SYSTEM
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(load_herb src/load_herb.cpp)
-target_link_libraries(load_herb
+add_executable(load_urdf src/load_herb.cpp)
+target_link_libraries(load_urdf
   ${DART_LIBRARIES}
   ${r3_LIBRARIES}
   ${catkin_LIBRARIES}
