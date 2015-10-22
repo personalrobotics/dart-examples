@@ -1,4 +1,4 @@
-# DART Examples for the Personal Robotics Lab
+# Personal Robotics Lab DART Examples
 
 ## Installation
 Checkout and build this package,
