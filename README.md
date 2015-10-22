@@ -23,7 +23,18 @@ instructions with this `.rosinstall` file:
     uri: https://github.com/personalrobotics/dart_rviz.git
     version: master
 - git:
+    local-name: herb_description
+    uri: https://github.com/personalrobotics/herb_description.git
+    version: master
+- git:
     local-name: r3
     uri: https://github.com/personalrobotics/r3.git
     version: master
+```
+
+You can speed up the build of DART by disabling the included examples, tests,
+and tutorials. To do so, pass these options to CMake (e.g. using `catkin config
+--cmake-args`):
+```shell
+-DDART_BUILD_EXAMPLES=OFF -DDART_BUILD_UNITTESTS=OFF -DDART_BUILD_TUTORIALS=OFF
 ```
