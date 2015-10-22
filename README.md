@@ -38,3 +38,9 @@ and tutorials. To do so, pass these options to CMake (e.g. using `catkin config
 ```shell
 -DDART_BUILD_EXAMPLES=OFF -DDART_BUILD_UNITTESTS=OFF -DDART_BUILD_TUTORIALS=OFF
 ```
+
+## Usage
+To load HERB:
+```shell
+$ rosrun dart_examples load_urdf package://herb_description/robots/herb.urdf
+```

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dart_examples</name>
+  <version>0.0.1</version>
+  <description>Examples of using DART in the Personal Robotics Lab.</description>
+  <maintainer email="mkoval@cs.cmu.edu">Michael Koval</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>dart</depend>
+  <depend>dart_rviz</depend>
+  <depend>r3</depend>
+</package>
