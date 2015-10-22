@@ -15,14 +15,16 @@ include_directories(SYSTEM
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(load_urdf src/load_herb.cpp)
+add_executable(load_urdf
+  src/load_urdf.cpp
+)
 target_link_libraries(load_urdf
   ${DART_LIBRARIES}
   ${r3_LIBRARIES}
   ${catkin_LIBRARIES}
 )
 
-install(TARGETS load_herb
+install(TARGETS load_urdf
   EXPORT "${PROJECT_NAME}Targets"
   RUNTIME DESTINATION "bin"
 )
