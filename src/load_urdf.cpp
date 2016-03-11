@@ -1,7 +1,7 @@
 #include <iostream>
 #include <dart/dart.h>
-#include <dart_rviz/InteractiveMarkerViewer.h>
-#include <r3/util/CatkinResourceRetriever.h>
+#include <aikido/rviz/InteractiveMarkerViewer.h>
+#include <aikido/util/CatkinResourceRetriever.h>
 
 static const std::string topicName("dart_markers");
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
   // Resolves package:// URIs by emulating the behavior of 'catkin_find'.
   const auto resourceRetriever
-    = std::make_shared<r3::util::CatkinResourceRetriever>();
+    = std::make_shared<aikido::util::CatkinResourceRetriever>();
 
   // Load the HERB URDF model as a Skeleton.
   dart::utils::DartLoader urdfLoader;
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 
   std::cout << "Starting viewer. Please subscribe to the '" << topicName
             << "' InteractiveMarker topic in RViz." << std::endl;
-  dart::rviz::InteractiveMarkerViewer viewer(topicName);
+  aikido::rviz::InteractiveMarkerViewer viewer(topicName);
   viewer.addSkeleton(skeleton);
   viewer.setAutoUpdate(true);
 
