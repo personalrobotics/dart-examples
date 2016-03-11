@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 2.8.8)
 project(dart_examples)
 
-find_package(catkin REQUIRED)
+list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
+
+find_package(catkin REQUIRED COMPONENTS aikido_rviz)
 find_package(DART REQUIRED COMPONENTS core)
 find_package(aikido REQUIRED)
-find_package(aikido_rviz REQUIRED)
+find_package(ASSIMP REQUIRED)
 
 catkin_package()
 
@@ -14,6 +16,7 @@ include_directories(SYSTEM
   ${DART_INCLUDE_DIRS}
   ${aikido_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
+  ${ASSIMP_INCLUDE_DIRS}
 )
 
 add_executable(load_urdf
@@ -23,6 +26,7 @@ target_link_libraries(load_urdf
   ${DART_LIBRARIES}
   ${aikido_LIBRARIES}
   ${catkin_LIBRARIES}
+  ${ASSIMP_LIBRARIES}
 )
 
 install(TARGETS load_urdf

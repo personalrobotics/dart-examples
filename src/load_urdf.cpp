@@ -1,7 +1,7 @@
 #include <iostream>
 #include <dart/dart.h>
-#include <aikido/rviz/InteractiveMarkerViewer.h>
-#include <aikido/util/CatkinResourceRetriever.h>
+#include <aikido/rviz/InteractiveMarkerViewer.hpp>
+#include <aikido/util/CatkinResourceRetriever.hpp>
 
 static const std::string topicName("dart_markers");
 
