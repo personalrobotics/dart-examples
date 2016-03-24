@@ -25,6 +25,7 @@ target_link_libraries(load_urdf
   ${DART_LIBRARIES}
   ${aikido_LIBRARIES}
   ${catkin_LIBRARIES}
+  ${ASSIMP_LIBRARIES}
 )
 
 install(TARGETS load_urdf
