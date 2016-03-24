@@ -10,4 +10,5 @@
   <depend>aikido_rviz</depend>
   <depend>aikido</depend>
   <depend>eigen</depend>
+  <depend>tf</depend>
 </package>

@@ -3,7 +3,7 @@ project(dart_examples)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
 
-find_package(catkin REQUIRED COMPONENTS aikido_rviz)
+find_package(catkin REQUIRED COMPONENTS aikido_rviz aikido_perception )
 find_package(DART REQUIRED COMPONENTS core)
 find_package(aikido REQUIRED)
 find_package(ASSIMP REQUIRED)
@@ -30,6 +30,21 @@ target_link_libraries(load_urdf
 )
 
 install(TARGETS load_urdf
+  EXPORT "${PROJECT_NAME}Targets"
+  RUNTIME DESTINATION "bin"
+)
+
+add_executable(test_perception
+  src/test_perception.cpp
+)
+target_link_libraries(test_perception
+  ${DART_LIBRARIES}
+  ${aikido_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${ASSIMP_LIBRARIES}
+)
+
+install(TARGETS test_perception
   EXPORT "${PROJECT_NAME}Targets"
   RUNTIME DESTINATION "bin"
 )
