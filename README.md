@@ -11,10 +11,10 @@ instructions with this `.rosinstall` file:
 - git:
     local-name: aikido
     uri: https://github.com/personalrobotics/aikido.git
-    version: master
+    version: feature/statespace
 - git:
     local-name: dart
-    uri: https://github.com/dartsim/dart.git
+    uri: https://github.com/personalrobotics/dart.git
     version: master
 - git:
     local-name: dart_examples
