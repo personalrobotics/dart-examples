@@ -8,7 +8,9 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>dart</depend>
   <depend>aikido_rviz</depend>
+  <depend>aikido_perception</depend>
   <depend>aikido</depend>
   <depend>eigen</depend>
   <depend>tf</depend>
+  <depend>yaml-cpp</depend>
 </package>

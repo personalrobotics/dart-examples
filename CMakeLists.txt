@@ -3,10 +3,14 @@ project(dart_examples)
 
 list(INSERT CMAKE_MODULE_PATH 0 "${PROJECT_SOURCE_DIR}/cmake") 
 
-find_package(catkin REQUIRED COMPONENTS aikido_rviz aikido_perception )
+find_package(catkin REQUIRED COMPONENTS aikido_rviz aikido_perception)
 
 find_package(DART REQUIRED COMPONENTS core)
 find_package(aikido REQUIRED)
+
+include(FindPkgConfig)
+pkg_check_modules(YamlCpp REQUIRED yaml-cpp)
+add_definitions(-DYAMLCPP_NEWAPI)
 
 catkin_package()
 
@@ -28,6 +32,16 @@ target_link_libraries(load_urdf
   ${ASSIMP_LIBRARIES}
 )
 
+add_executable(load_kinbody
+  src/load_kinbody.cpp
+)
+target_link_libraries(load_kinbody
+  ${DART_LIBRARIES}
+  ${aikido_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${ASSIMP_LIBRARIES}
+)
+
 install(TARGETS load_urdf
   RUNTIME DESTINATION "bin"
 )
@@ -40,9 +54,10 @@ target_link_libraries(test_perception
   ${aikido_LIBRARIES}
   ${catkin_LIBRARIES}
   ${ASSIMP_LIBRARIES}
+  ${YamlCpp_LIBRARIES}
 )
 
-install(TARGETS test_perception
-  EXPORT "${PROJECT_NAME}Targets"
-  RUNTIME DESTINATION "bin"
-)
+#install(TARGETS test_perception
+#  EXPORT "${PROJECT_NAME}Targets"
+#  RUNTIME DESTINATION "bin"
+#)
