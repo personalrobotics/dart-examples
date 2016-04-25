@@ -119,7 +119,6 @@ int main(int argc, char** argv)
   rightArmIk->setDofs(rightArm->getDofs());
 
   auto collisionDetector = FCLCollisionDetector::create();
-  collisionDetector->setPrimitiveShapeType(FCLCollisionDetector::PRIMITIVE);
 
   auto rightArmSpace = std::make_shared<MetaSkeletonStateSpace>(rightArm);
   auto nonCollidingConstraint = std::make_shared<NonColliding>(
