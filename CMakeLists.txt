@@ -3,7 +3,7 @@ project(dart_examples)
 
 find_package(catkin REQUIRED COMPONENTS aikido_rviz)
 find_package(DART REQUIRED COMPONENTS core)
-find_package(aikido REQUIRED)
+find_package(aikido REQUIRED COMPONENTS util)
 
 catkin_package()
 
