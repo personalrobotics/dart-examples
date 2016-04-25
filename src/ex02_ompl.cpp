@@ -6,10 +6,12 @@
 #include <aikido/constraint/NonColliding.hpp>
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/distance/defaults.hpp>
+#include <aikido/planner/parabolic/ParabolicTimer.hpp>
 #include <aikido/planner/ompl/Planner.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/statespace/GeodesicInterpolator.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
+#include <aikido/trajectory/Interpolated.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
 #include <aikido/util/RNG.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
@@ -23,9 +25,11 @@ using aikido::constraint::createSampleableBounds;
 using aikido::constraint::createTestableBounds;
 using aikido::distance::createDistanceMetric;
 using aikido::planner::ompl::planOMPL;
+using aikido::planner::parabolic::computeParabolicTiming;
 using aikido::rviz::InteractiveMarkerViewer;
 using aikido::statespace::GeodesicInterpolator;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
+using aikido::trajectory::TrajectoryPtr;
 using aikido::util::CatkinResourceRetriever;
 using aikido::util::RNG;
 using aikido::util::RNGWrapper;
@@ -35,11 +39,50 @@ using dart::common::Uri;
 using dart::common::make_unique;
 using dart::dynamics::Chain;
 using dart::dynamics::InverseKinematics;
+using dart::dynamics::MetaSkeleton;
 
 static const Uri herbUri { "package://herb_description/robots/herb.urdf" };
 static const std::string topicName { "dart_markers" };
 static const double planningTimeout { 10. };
 static const int maxNumIkTrials { 10 };
+
+namespace {
+
+// TODO: Why is getXXXLowerLimit not const?
+
+Eigen::VectorXd getVelocityLimits(MetaSkeleton& _metaSkeleton)
+{
+  Eigen::VectorXd velocityLimits(_metaSkeleton.getNumDofs());
+
+  for (size_t i = 0; i < velocityLimits.size(); ++i)
+  {
+    velocityLimits[i] = std::min(
+      -_metaSkeleton.getVelocityLowerLimit(i),
+      +_metaSkeleton.getVelocityUpperLimit(i)
+    );
+    // TODO: Warn if assymmetric.
+  }
+
+  return velocityLimits;
+}
+
+Eigen::VectorXd getAccelerationLimits(MetaSkeleton& _metaSkeleton)
+{
+  Eigen::VectorXd accelerationLimits(_metaSkeleton.getNumDofs());
+
+  for (size_t i = 0; i < accelerationLimits.size(); ++i)
+  {
+    accelerationLimits[i] = std::min(
+      -_metaSkeleton.getAccelerationLowerLimit(i),
+      +_metaSkeleton.getAccelerationUpperLimit(i)
+    );
+    // TODO: Warn if assymmetric.
+  }
+
+  return accelerationLimits;
+}
+
+} // namespace
 
 int main(int argc, char** argv)
 {
@@ -70,24 +113,44 @@ int main(int argc, char** argv)
   auto startState = rightArmSpace->getScopedStateFromMetaSkeleton();
   auto goalRegion = std::make_shared<TSR>(std::move(engines[0]));
 
-  auto trajectory = planOMPL<ompl::geometric::RRTConnect>(
-    startState,
-    std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
-    std::make_shared<InverseKinematicsSampleable>(
-      rightArmSpace, goalRegion, 
-      createSampleableBounds(rightArmSpace, std::move(engines[1])),
-      rightArmIk,
-      maxNumIkTrials
-    ),
-    rightArmSpace,
-    std::make_shared<GeodesicInterpolator>(rightArmSpace),
-    createDistanceMetric(rightArmSpace),
-    createSampleableBounds(rightArmSpace, std::move(engines[2])),
-    nonCollidingConstraint,
-    createTestableBounds(rightArmSpace),
-    createProjectableBounds(rightArmSpace),
-    planningTimeout
-  );
+  TrajectoryPtr untimedTrajectory;
+  try
+  {
+    untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
+      startState,
+      std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
+      std::make_shared<InverseKinematicsSampleable>(
+        rightArmSpace, goalRegion,
+        createSampleableBounds(rightArmSpace, std::move(engines[1])),
+        rightArmIk,
+        maxNumIkTrials
+      ),
+      rightArmSpace,
+      std::make_shared<GeodesicInterpolator>(rightArmSpace),
+      createDistanceMetric(rightArmSpace),
+      createSampleableBounds(rightArmSpace, std::move(engines[2])),
+      nonCollidingConstraint,
+      createTestableBounds(rightArmSpace),
+      createProjectableBounds(rightArmSpace),
+      planningTimeout
+    );
+  }
+  // TODO: This should throw a more informative exception.
+  catch (const std::runtime_error& e)
+  {
+    std::cerr << "Planning failed: " << e.what() << std::endl;
+    return 1;
+  }
+
+  // TODO: OMPL should return an Interpolated instead of a Trajectory.
+  const auto& untimedInterpolatedTrajectory = dynamic_cast<
+    const aikido::trajectory::Interpolated&>(*untimedTrajectory);
+  auto timedTrajectory = computeParabolicTiming(
+    untimedInterpolatedTrajectory,
+    getVelocityLimits(*rightArm),
+    getAccelerationLimits(*rightArm));
+
+  // TODO: Simulate execution.
 
   ros::init(argc, argv, "ex02_ompl");
 
