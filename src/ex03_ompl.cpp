@@ -1,5 +1,6 @@
 #include <iostream>
 #include <dart/dart.h>
+#include <aikido/constraint/CyclicSampleable.hpp>
 #include <aikido/constraint/FrameTestable.hpp>
 #include <aikido/constraint/InverseKinematicsSampleable.hpp>
 #include <aikido/constraint/JointStateSpaceHelpers.hpp>
@@ -17,6 +18,7 @@
 #include <aikido/util/StepSequence.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
+using aikido::constraint::CyclicSampleable;
 using aikido::constraint::FrameTestable;
 using aikido::constraint::InverseKinematicsSampleable;
 using aikido::constraint::NonColliding;
@@ -37,6 +39,7 @@ using aikido::util::RNG;
 using aikido::util::RNGWrapper;
 using aikido::util::splitEngine;
 using dart::collision::FCLCollisionDetector;
+using dart::collision::BodyNodeCollisionFilter;
 using dart::common::Uri;
 using dart::common::make_unique;
 using dart::dynamics::Chain;
@@ -93,6 +96,19 @@ int main(int argc, char** argv)
 
   auto resourceRetriever = std::make_shared<CatkinResourceRetriever>();
   auto skeleton = urdfLoader.parseSkeleton(herbUri, resourceRetriever);
+  skeleton->enableSelfCollision(false);
+
+  // TODO: Load this from HERB's SRDF file.
+  std::vector<std::string> disableCollisions {
+    "/left/hand_base",
+    "/right/hand_base",
+    "/left/wam1",
+    "/right/wam1",
+    "/left/wam6",
+    "/right/wam6"
+  };
+  for (const auto& bodyNodeName : disableCollisions)
+    skeleton->getBodyNode(bodyNodeName)->setCollidable(false);
 
   auto rightArmBase = skeleton->getBodyNode("/right/wam_base");
   auto rightArmTip = skeleton->getBodyNode("/right/wam7");
@@ -107,10 +123,11 @@ int main(int argc, char** argv)
   auto rightArmSpace = std::make_shared<MetaSkeletonStateSpace>(rightArm);
   auto nonCollidingConstraint = std::make_shared<NonColliding>(
     rightArmSpace, collisionDetector);
-  nonCollidingConstraint->addSelfCheck(
-    collisionDetector->createCollisionGroupAsSharedPtr(skeleton.get()));
+  auto collisionGroup = collisionDetector->createCollisionGroupAsSharedPtr(skeleton.get());
+  nonCollidingConstraint->addSelfCheck(collisionGroup);
 
-  auto seedEngine = RNGWrapper<std::default_random_engine>(10);
+  std::random_device randomDevice;
+  auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
   auto engines = splitEngine(seedEngine, 3);
 
   auto startState = rightArmSpace->getScopedStateFromMetaSkeleton();
@@ -123,35 +140,28 @@ int main(int argc, char** argv)
   rightArmSpace->setState(goalState);
   auto goalRegion = std::make_shared<TSR>(std::move(engines[0]), rightArmTip->getTransform());
 
-  InterpolatedPtr untimedTrajectory;
-  try
-  {
-    untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
-      startState,
-      std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
-      std::make_shared<InverseKinematicsSampleable>(
-        rightArmSpace, goalRegion,
-        createSampleableBounds(rightArmSpace, std::move(engines[1])),
-        rightArmIk,
-        maxNumIkTrials
-      ),
+  auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
+    startState,
+    std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
+    std::make_shared<InverseKinematicsSampleable>(
       rightArmSpace,
-      std::make_shared<GeodesicInterpolator>(rightArmSpace),
-      createDistanceMetric(rightArmSpace),
-      createSampleableBounds(rightArmSpace, std::move(engines[2])),
-      nonCollidingConstraint,
-      createTestableBounds(rightArmSpace),
-      createProjectableBounds(rightArmSpace),
-      planningTimeout,
-      maxDistBtwValidityChecks
-    );
-  }
-  // TODO: This should throw a more informative exception.
-  catch (const std::runtime_error& e)
-  {
-    std::cerr << "Planning failed: " << e.what() << std::endl;
-    return 1;
-  }
+      std::make_shared<CyclicSampleable>(goalRegion),
+      createSampleableBounds(rightArmSpace, std::move(engines[1])),
+      rightArmIk,
+      maxNumIkTrials
+    ),
+    rightArmSpace,
+    std::make_shared<GeodesicInterpolator>(rightArmSpace),
+    createDistanceMetric(rightArmSpace),
+    createSampleableBounds(rightArmSpace, std::move(engines[2])),
+    nonCollidingConstraint,
+    createTestableBounds(rightArmSpace),
+    createProjectableBounds(rightArmSpace),
+    planningTimeout,
+    maxDistBtwValidityChecks
+  );
+  if (!untimedTrajectory)
+    throw std::runtime_error("Planning failed.");
 
   auto timedTrajectory = computeParabolicTiming(
     *untimedTrajectory,
@@ -176,6 +186,7 @@ int main(int argc, char** argv)
   for( double t: seq ){
       untimedTrajectory->evaluate(t, state);
       rightArmSpace->setState(state);
+
       usleep(stepsize*1000*1000);
   }
 
