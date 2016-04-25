@@ -28,10 +28,9 @@ using aikido::distance::createDistanceMetric;
 using aikido::planner::ompl::planOMPL;
 using aikido::planner::parabolic::computeParabolicTiming;
 using aikido::rviz::InteractiveMarkerViewer;
-using aikido::statespace::CartesianProduct;
 using aikido::statespace::GeodesicInterpolator;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
-using aikido::trajectory::InterpolatedPtr;
+using aikido::trajectory::TrajectoryPtr;
 using aikido::util::CatkinResourceRetriever;
 using aikido::util::RNG;
 using aikido::util::RNGWrapper;
@@ -110,25 +109,31 @@ int main(int argc, char** argv)
   nonCollidingConstraint->addSelfCheck(
     collisionDetector->createCollisionGroupAsSharedPtr(skeleton.get()));
 
-  auto seedEngine = RNGWrapper<std::default_random_engine>(0);
+  auto seedEngine = RNGWrapper<std::default_random_engine>(10);
   auto engines = splitEngine(seedEngine, 3);
 
-  auto startState = rightArmSpace->createState();
-  Eigen::VectorXd startConfiguration(7);
-  startConfiguration << 3.68, -1.90,  0.00,  2.20,  0.00,  0.00,  0.00; // home
-  rightArmSpace->convertPositionsToState(startConfiguration, startState);
+  auto startState = rightArmSpace->getScopedStateFromMetaSkeleton();
 
+  // Goal region - point TSR around relaxed home
   auto goalState = rightArmSpace->createState();
   Eigen::VectorXd goalConfiguration(7);
   goalConfiguration << 5.65, -1.76, -0.26,  1.96, -1.15 , 0.87, -1.43; // relaxed home
   rightArmSpace->convertPositionsToState(goalConfiguration, goalState);
+  rightArmSpace->setState(goalState);
+  auto goalRegion = std::make_shared<TSR>(std::move(engines[0]), rightArmTip->getTransform());
 
   InterpolatedPtr untimedTrajectory;
   try
   {
     untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
       startState,
-      goalState,
+      std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
+      std::make_shared<InverseKinematicsSampleable>(
+        rightArmSpace, goalRegion,
+        createSampleableBounds(rightArmSpace, std::move(engines[1])),
+        rightArmIk,
+        maxNumIkTrials
+      ),
       rightArmSpace,
       std::make_shared<GeodesicInterpolator>(rightArmSpace),
       createDistanceMetric(rightArmSpace),
@@ -152,14 +157,9 @@ int main(int argc, char** argv)
     getVelocityLimits(*rightArm),
     getAccelerationLimits(*rightArm));
 
-  std::cout << "Trajectory duration before timing: "
-            << untimedTrajectory->getDuration() << std::endl;
-  std::cout << "Trajectory duration after timing: "
-            << timedTrajectory->getDuration() << std::endl;
-
   // TODO: Simulate execution.
-  
-  ros::init(argc, argv, "ex02_ompl");
+
+  ros::init(argc, argv, "ex03_ompl");
 
   InteractiveMarkerViewer viewer(topicName);
   viewer.addSkeleton(skeleton);
