@@ -75,13 +75,14 @@ int main(int argc, char** argv)
     std::make_shared<FrameTestable>(rightArmSpace, rightArmTip, goalRegion),
     std::make_shared<InverseKinematicsSampleable>(
       rightArmSpace, goalRegion, 
-      createSampleableBounds(rightArmSpace, std::move(engines[2])),
+      createSampleableBounds(rightArmSpace, std::move(engines[1])),
       rightArmIk,
-      maxNumIkTrials),
+      maxNumIkTrials
+    ),
     rightArmSpace,
     std::make_shared<GeodesicInterpolator>(rightArmSpace),
     createDistanceMetric(rightArmSpace),
-    createSampleableBounds(rightArmSpace, std::move(engines[1])),
+    createSampleableBounds(rightArmSpace, std::move(engines[2])),
     nonCollidingConstraint,
     createTestableBounds(rightArmSpace),
     createProjectableBounds(rightArmSpace),
