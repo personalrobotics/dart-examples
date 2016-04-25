@@ -45,6 +45,7 @@ static const Uri herbUri { "package://herb_description/robots/herb.urdf" };
 static const std::string topicName { "dart_markers" };
 static const double planningTimeout { 10. };
 static const int maxNumIkTrials { 10 };
+static const double maxDistBtwValidityChecks { 0.1 };
 
 namespace {
 
@@ -132,7 +133,8 @@ int main(int argc, char** argv)
       nonCollidingConstraint,
       createTestableBounds(rightArmSpace),
       createProjectableBounds(rightArmSpace),
-      planningTimeout
+      planningTimeout,
+      maxDistBtwValidityChecks
     );
   }
   // TODO: This should throw a more informative exception.
