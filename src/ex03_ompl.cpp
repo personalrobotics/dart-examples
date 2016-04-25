@@ -75,10 +75,11 @@ Eigen::VectorXd getAccelerationLimits(MetaSkeleton& _metaSkeleton)
 
   for (size_t i = 0; i < accelerationLimits.size(); ++i)
   {
-    accelerationLimits[i] = std::min(
+      accelerationLimits[i] = std::min(2.0, std::min(
       -_metaSkeleton.getAccelerationLowerLimit(i),
       +_metaSkeleton.getAccelerationUpperLimit(i)
-    );
+                                           ));
+
     // TODO: Warn if assymmetric.
   }
 
@@ -157,7 +158,7 @@ int main(int argc, char** argv)
     *untimedTrajectory,
     getVelocityLimits(*rightArm),
     getAccelerationLimits(*rightArm));
-
+  
   // TODO: Simulate execution.
 
   ros::init(argc, argv, "ex03_ompl");
@@ -169,12 +170,12 @@ int main(int argc, char** argv)
   // TODO: Remove in favor of actual simulated execution
   std::cout << "Playing back untimed trajectory..." << std::endl;
   double stepsize = 0.05;
-  aikido::util::StepSequence seq(stepsize, true, untimedTrajectory->getStartTime(),
-                                 untimedTrajectory->getEndTime());
+  aikido::util::StepSequence seq(stepsize, true, timedTrajectory->getStartTime(),
+                                 timedTrajectory->getEndTime());
   auto state = rightArmSpace->createState();
 
   for( double t: seq ){
-      untimedTrajectory->evaluate(t, state);
+      timedTrajectory->evaluate(t, state);
       rightArmSpace->setState(state);
       usleep(stepsize*1000*1000);
   }
