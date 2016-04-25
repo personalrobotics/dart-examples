@@ -30,6 +30,7 @@ using aikido::planner::parabolic::computeParabolicTiming;
 using aikido::rviz::InteractiveMarkerViewer;
 using aikido::statespace::GeodesicInterpolator;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
+using aikido::trajectory::InterpolatedPtr;
 using aikido::trajectory::TrajectoryPtr;
 using aikido::util::CatkinResourceRetriever;
 using aikido::util::RNG;
