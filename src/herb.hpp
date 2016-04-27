@@ -6,6 +6,7 @@
 #include <aikido/trajectory/Interpolated.hpp>
 #include <aikido/trajectory/Trajectory.hpp>
 #include <aikido/constraint/NonColliding.hpp>
+#include <aikido/constraint/TSR.hpp>
 
 class Herb {
 
@@ -22,6 +23,9 @@ public:
 
   /// Get the right arm
   dart::dynamics::ChainPtr getRightArm() const;
+
+  /// Get the right end-effector
+  dart::dynamics::BodyNodePtr getRightEndEffector() const;
 
   /// Compute velocity limits from the MetaSkeleton
   Eigen::VectorXd
@@ -43,6 +47,12 @@ public:
       aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
       const Eigen::VectorXd &_goal, double _timelimit) const;
 
+  /// Plan to a goal region defined as a Task Space Region
+  aikido::trajectory::InterpolatedPtr
+  planToTSR(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
+            dart::dynamics::ConstJacobianNodePtr _endEffector,
+            aikido::constraint::TSRPtr _tsr, double _timelimit) const;
+
   /// Retime a trajectory to respect Herb's velocity and acceleration limits
   aikido::trajectory::TrajectoryPtr
   retimeTrajectory(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
@@ -63,6 +73,7 @@ private:
   dart::dynamics::SkeletonPtr mRobot;
   dart::dynamics::ChainPtr mRightArm;
   dart::dynamics::BodyNodePtr mRightEndEffector;
+  dart::dynamics::InverseKinematicsPtr mRightIk;
 };
 
 #endif

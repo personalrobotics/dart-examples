@@ -1,4 +1,7 @@
 #include "herb.hpp"
+#include <aikido/constraint/CyclicSampleable.hpp>
+#include <aikido/constraint/FrameTestable.hpp>
+#include <aikido/constraint/InverseKinematicsSampleable.hpp>
 #include <aikido/constraint/JointStateSpaceHelpers.hpp>
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/distance/defaults.hpp>
@@ -10,8 +13,11 @@
 #include <aikido/util/StepSequence.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
+using aikido::constraint::CyclicSampleable;
+using aikido::constraint::FrameTestable;
+using aikido::constraint::InverseKinematicsSampleable;
 using aikido::constraint::NonColliding;
-using aikido::constraint::TSR;
+using aikido::constraint::TSRPtr;
 using aikido::constraint::createProjectableBounds;
 using aikido::constraint::createSampleableBounds;
 using aikido::constraint::createTestableBounds;
@@ -24,11 +30,14 @@ using aikido::trajectory::InterpolatedPtr;
 using aikido::trajectory::TrajectoryPtr;
 using aikido::util::CatkinResourceRetriever;
 using aikido::util::RNGWrapper;
+using aikido::util::splitEngine;
 using aikido::util::StepSequence;
 using dart::collision::FCLCollisionDetector;
 using dart::common::make_unique;
+using dart::dynamics::BodyNodePtr;
 using dart::dynamics::Chain;
 using dart::dynamics::ChainPtr;
+using dart::dynamics::ConstJacobianNodePtr;
 using dart::dynamics::InverseKinematics;
 using dart::dynamics::MetaSkeleton;
 using dart::dynamics::SkeletonPtr;
@@ -45,13 +54,15 @@ Herb::Herb() : mCollisionResolution(0.02) {
   mRightEndEffector = mRobot->getBodyNode("/right/wam7");
   mRightArm = Chain::create(rightArmBase, mRightEndEffector, "right_arm");
 
-  auto rightArmIk = InverseKinematics::create(mRightEndEffector);
-  rightArmIk->setDofs(mRightArm->getDofs());
+  auto mRightIk = InverseKinematics::create(mRightEndEffector);
+  mRightIk->setDofs(mRightArm->getDofs());
 }
 
 SkeletonPtr Herb::getSkeleton() const { return mRobot; }
 
 ChainPtr Herb::getRightArm() const { return mRightArm; }
+
+BodyNodePtr Herb::getRightEndEffector() const { return mRightEndEffector; }
 
 Eigen::VectorXd Herb::getVelocityLimits(MetaSkeleton &_metaSkeleton) const {
   Eigen::VectorXd velocityLimits(_metaSkeleton.getNumDofs());
@@ -107,6 +118,37 @@ InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
       _timelimit, mCollisionResolution
     );
 
+  return untimedTrajectory;
+}
+
+InterpolatedPtr Herb::planToTSR(MetaSkeletonStateSpacePtr _space,
+                                ConstJacobianNodePtr _endEffector,
+                                TSRPtr _tsr,
+                                double _timelimit) const {
+  auto startState = _space->getScopedStateFromMetaSkeleton();
+
+
+  std::random_device randomDevice;
+  auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
+  auto engines = splitEngine(seedEngine, 2);
+
+  auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
+      startState, 
+      std::make_shared<FrameTestable>(_space, _endEffector, _tsr),
+      std::make_shared<InverseKinematicsSampleable>(
+          _space, 
+          std::make_shared<CyclicSampleable>(_tsr),
+          createSampleableBounds(_space, std::move(engines[0])), 
+          mRightIk,
+          10),
+      _space, 
+      std::make_shared<GeodesicInterpolator>(_space),
+      createDistanceMetric(_space),
+      createSampleableBounds(_space, std::move(engines[1])),
+      getSelfCollisionConstraint(_space), 
+      createTestableBounds(_space),
+      createProjectableBounds(_space), 
+      _timelimit, mCollisionResolution);
   return untimedTrajectory;
 }
 
