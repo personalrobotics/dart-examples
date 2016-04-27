@@ -53,6 +53,14 @@ public:
             dart::dynamics::ConstJacobianNodePtr _endEffector,
             aikido::constraint::TSRPtr _tsr, double _timelimit) const;
 
+  /// Plan the end-effector to move along a straight line for a desired distance
+  aikido::trajectory::InterpolatedPtr
+  planToEndEffectorOffset(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
+                          dart::dynamics::ConstJacobianNodePtr _endEffector,
+                          //const Eigen::Vector3d &_direction,
+                          double _distance,
+                          double _timelimit) const;
+
   /// Retime a trajectory to respect Herb's velocity and acceleration limits
   aikido::trajectory::TrajectoryPtr
   retimeTrajectory(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,

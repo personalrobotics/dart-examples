@@ -1,11 +1,14 @@
 #include "herb.hpp"
 #include <aikido/constraint/CyclicSampleable.hpp>
+#include <aikido/constraint/FrameDifferentiable.hpp>
 #include <aikido/constraint/FrameTestable.hpp>
 #include <aikido/constraint/InverseKinematicsSampleable.hpp>
 #include <aikido/constraint/JointStateSpaceHelpers.hpp>
+#include <aikido/constraint/NewtonsMethodProjectable.hpp>
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/distance/defaults.hpp>
 #include <aikido/planner/parabolic/ParabolicTimer.hpp>
+#include <aikido/planner/ompl/CRRT.hpp>
 #include <aikido/planner/ompl/Planner.hpp>
 #include <aikido/statespace/GeodesicInterpolator.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
@@ -14,14 +17,19 @@
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
 using aikido::constraint::CyclicSampleable;
+using aikido::constraint::FrameDifferentiable;
 using aikido::constraint::FrameTestable;
 using aikido::constraint::InverseKinematicsSampleable;
+using aikido::constraint::NewtonsMethodProjectable;
 using aikido::constraint::NonColliding;
+using aikido::constraint::TSR;
 using aikido::constraint::TSRPtr;
 using aikido::constraint::createProjectableBounds;
 using aikido::constraint::createSampleableBounds;
 using aikido::constraint::createTestableBounds;
 using aikido::distance::createDistanceMetric;
+using aikido::planner::ompl::CRRT;
+using aikido::planner::ompl::planConstrained;
 using aikido::planner::ompl::planOMPL;
 using aikido::planner::parabolic::computeParabolicTiming;
 using aikido::statespace::GeodesicInterpolator;
@@ -39,6 +47,7 @@ using dart::dynamics::Chain;
 using dart::dynamics::ChainPtr;
 using dart::dynamics::ConstJacobianNodePtr;
 using dart::dynamics::InverseKinematics;
+using dart::dynamics::JacobianNode;
 using dart::dynamics::MetaSkeleton;
 using dart::dynamics::SkeletonPtr;
 
@@ -54,7 +63,7 @@ Herb::Herb() : mCollisionResolution(0.02) {
   mRightEndEffector = mRobot->getBodyNode("/right/wam7");
   mRightArm = Chain::create(rightArmBase, mRightEndEffector, "right_arm");
 
-  auto mRightIk = InverseKinematics::create(mRightEndEffector);
+  mRightIk = InverseKinematics::create(mRightEndEffector);
   mRightIk->setDofs(mRightArm->getDofs());
 }
 
@@ -142,6 +151,48 @@ InterpolatedPtr Herb::planToTSR(MetaSkeletonStateSpacePtr _space,
           mRightIk,
           10),
       _space, 
+      std::make_shared<GeodesicInterpolator>(_space),
+      createDistanceMetric(_space),
+      createSampleableBounds(_space, std::move(engines[1])),
+      getSelfCollisionConstraint(_space), 
+      createTestableBounds(_space),
+      createProjectableBounds(_space), 
+      _timelimit, mCollisionResolution);
+  return untimedTrajectory;
+}
+
+InterpolatedPtr Herb::planToEndEffectorOffset(MetaSkeletonStateSpacePtr _space,
+                                              ConstJacobianNodePtr _endEffector,
+                                              //                 const Eigen::Vector3d &_direction,
+                                              double _distance,
+                                              double _timelimit) const {
+  auto startState = _space->getScopedStateFromMetaSkeleton();
+
+  std::random_device randomDevice;
+  auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
+  auto engines = splitEngine(seedEngine, 2);
+
+  TSRPtr constraint = std::make_shared<TSR>(_endEffector->getTransform());
+  double epsilon = 0.01;
+  constraint->mBw << -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon + _distance,
+      -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon;
+  TSRPtr goalRegion = std::make_shared<TSR>(_endEffector->getTransform());
+  goalRegion->mTw_e(2,3) += _distance;
+
+  auto untimedTrajectory = planConstrained<CRRT>(
+      startState, 
+      std::make_shared<FrameTestable>(_space, _endEffector, goalRegion),
+      std::make_shared<InverseKinematicsSampleable>(
+          _space, 
+          std::make_shared<CyclicSampleable>(goalRegion),
+          createSampleableBounds(_space, std::move(engines[0])), 
+          mRightIk,
+          10),
+      std::make_shared<NewtonsMethodProjectable>(
+          std::make_shared<FrameDifferentiable>(
+              _space, _endEffector, constraint),
+          std::vector<double>(6, 1e-4)),
+      _space,
       std::make_shared<GeodesicInterpolator>(_space),
       createDistanceMetric(_space),
       createSampleableBounds(_space, std::move(engines[1])),

@@ -33,4 +33,5 @@ include_directories(SYSTEM
 
 add_dart_example(load_urdf src/load_urdf.cpp)
 add_dart_example(ex02_ompl src/ex02_ompl.cpp src/herb.cpp)
-#add_dart_example(ex03_ompl src/ex03_ompl.cpp)
+add_dart_example(ex03_ompl src/ex03_ompl.cpp src/herb.cpp)
+add_dart_example(ex04_ompl src/ex04_ompl.cpp src/herb.cpp)
