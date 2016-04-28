@@ -19,6 +19,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 function(add_dart_example target_name)
   add_executable("${target_name}" ${ARGN})
   target_link_libraries("${target_name}"
+    "${PROJECT_NAME}_herb"
     ${DART_LIBRARIES}
     ${aikido_LIBRARIES}
     ${aikido_rviz_LIBRARIES}
@@ -31,7 +32,14 @@ include_directories(SYSTEM
   ${aikido_rviz_INCLUDE_DIRS}
 )
 
+add_library("${PROJECT_NAME}_herb" src/herb.cpp)
+target_link_libraries("${PROJECT_NAME}_herb"
+  ${DART_LIBRARIES}
+  ${aikido_LIBRARIES}
+  ${aikido_rviz_LIBRARIES}
+)
+
 add_dart_example(load_urdf src/load_urdf.cpp)
-add_dart_example(ex02_ompl src/ex02_ompl.cpp src/herb.cpp)
-add_dart_example(ex03_ompl src/ex03_ompl.cpp src/herb.cpp)
-add_dart_example(ex04_ompl src/ex04_ompl.cpp src/herb.cpp)
+add_dart_example(ex02_ompl src/ex02_ompl.cpp)
+add_dart_example(ex03_ompl src/ex03_ompl.cpp)
+add_dart_example(ex04_ompl src/ex04_ompl.cpp)
