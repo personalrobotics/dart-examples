@@ -263,7 +263,10 @@ Herb::getSelfCollisionConstraint(MetaSkeletonStateSpacePtr _space) const {
     mRobot->getBodyNode(bodyNodeName)->setCollidable(false);
 
   auto collisionDetector = FCLCollisionDetector::create();
-  collisionDetector->setPrimitiveShapeType(FCLCollisionDetector::PRIMITIVE);
+
+  // TODO: Switch to PRIMITIVE once this is fixed in DART.
+  //collisionDetector->setPrimitiveShapeType(FCLCollisionDetector::PRIMITIVE);
+
   auto nonCollidingConstraint =
       std::make_shared<NonColliding>(_space, collisionDetector);
   nonCollidingConstraint->addSelfCheck(
