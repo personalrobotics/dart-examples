@@ -8,7 +8,7 @@ using aikido::rviz::InteractiveMarkerViewer;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
 
 static const std::string topicName{"dart_markers"};
-static const double planningTimeout{10.};
+static const double planningTimeout{60.};
 
 int main(int argc, char **argv) {
   Herb robot;
@@ -21,14 +21,16 @@ int main(int argc, char **argv) {
   robot.setConfiguration(rightArmSpace, startConfiguration);
 
   auto untimedTrajectory = robot.planToEndEffectorOffset(
-      rightArmSpace, robot.getRightEndEffector().get(), 0.3, planningTimeout);
+      rightArmSpace, robot.getRightEndEffector().get(),
+      Eigen::Vector3d(0, 0, -1),
+      0.3, planningTimeout);
   if (!untimedTrajectory)
     throw std::runtime_error("Failed to find a solution");
 
   auto timedTrajectory =
       robot.retimeTrajectory(rightArmSpace, untimedTrajectory);
 
-  ros::init(argc, argv, "ex02_ompl");
+  ros::init(argc, argv, "ex04_ompl");
 
   InteractiveMarkerViewer viewer(topicName);
   viewer.addSkeleton(robot.getSkeleton());

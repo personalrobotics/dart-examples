@@ -57,7 +57,7 @@ public:
   aikido::trajectory::InterpolatedPtr
   planToEndEffectorOffset(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
                           dart::dynamics::ConstJacobianNodePtr _endEffector,
-                          //const Eigen::Vector3d &_direction,
+                          const Eigen::Vector3d &_direction,
                           double _distance,
                           double _timelimit) const;
 

@@ -163,28 +163,45 @@ InterpolatedPtr Herb::planToTSR(MetaSkeletonStateSpacePtr _space,
 
 InterpolatedPtr Herb::planToEndEffectorOffset(MetaSkeletonStateSpacePtr _space,
                                               ConstJacobianNodePtr _endEffector,
-                                              //                 const Eigen::Vector3d &_direction,
+                                              const Eigen::Vector3d &_direction,
                                               double _distance,
                                               double _timelimit) const {
   auto startState = _space->getScopedStateFromMetaSkeleton();
+  Eigen::VectorXd positions(7);
+  _space->convertStateToPositions(startState, positions);
 
   std::random_device randomDevice;
   auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
   auto engines = splitEngine(seedEngine, 2);
 
-  TSRPtr constraint = std::make_shared<TSR>(_endEffector->getTransform());
+  // Generate the constraint TSR
+  // Frame w set such that the z-axis is pointing along the direction to move
   double epsilon = 0.01;
-  constraint->mBw << -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon + _distance,
+  TSRPtr constraint = std::make_shared<TSR>();
+  constraint->mT0_w = dart::math::computeTransform(_direction / _direction.norm(),
+                                                   _endEffector->getTransform().translation(),
+                                                   dart::math::AxisType::AXIS_Z);
+  constraint->mTw_e = constraint->mT0_w.inverse() * _endEffector->getTransform(); 
+  constraint->mBw << -epsilon, epsilon, 
+      -epsilon, epsilon, std::min(0., _distance), std::max(0., _distance),
       -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon;
-  TSRPtr goalRegion = std::make_shared<TSR>(_endEffector->getTransform());
-  goalRegion->mTw_e(2,3) += _distance;
+  std::cout << constraint->mT0_w.matrix() << std::endl;
+
+  TSRPtr goalRegion = std::make_shared<TSR>();
+  auto offset = Eigen::Isometry3d::Identity();
+  offset(2,3) = _distance;
+  goalRegion->mT0_w = constraint->mT0_w * offset;
+  goalRegion->mTw_e = constraint->mTw_e;
+  goalRegion->mBw << -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon,
+      -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon;
+
 
   auto untimedTrajectory = planConstrained<CRRT>(
       startState, 
       std::make_shared<FrameTestable>(_space, _endEffector, goalRegion),
       std::make_shared<InverseKinematicsSampleable>(
           _space, 
-          std::make_shared<CyclicSampleable>(goalRegion),
+          goalRegion,
           createSampleableBounds(_space, std::move(engines[0])), 
           mRightIk,
           10),
