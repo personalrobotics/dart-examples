@@ -9,6 +9,7 @@
 #include <aikido/distance/defaults.hpp>
 #include <aikido/planner/parabolic/ParabolicTimer.hpp>
 #include <aikido/planner/ompl/CRRT.hpp>
+#include <aikido/planner/ompl/CRRTConnect.hpp>
 #include <aikido/planner/ompl/Planner.hpp>
 #include <aikido/statespace/GeodesicInterpolator.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
@@ -29,7 +30,8 @@ using aikido::constraint::createSampleableBounds;
 using aikido::constraint::createTestableBounds;
 using aikido::distance::createDistanceMetric;
 using aikido::planner::ompl::CRRT;
-using aikido::planner::ompl::planConstrained;
+using aikido::planner::ompl::planCRRT;
+using aikido::planner::ompl::planCRRTConnect;
 using aikido::planner::ompl::planOMPL;
 using aikido::planner::parabolic::computeParabolicTiming;
 using aikido::statespace::GeodesicInterpolator;
@@ -196,7 +198,7 @@ InterpolatedPtr Herb::planToEndEffectorOffset(MetaSkeletonStateSpacePtr _space,
       -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon;
 
 
-  auto untimedTrajectory = planConstrained<CRRT>(
+  auto untimedTrajectory = planCRRTConnect(
       startState, 
       std::make_shared<FrameTestable>(_space, _endEffector, goalRegion),
       std::make_shared<InverseKinematicsSampleable>(
@@ -216,7 +218,9 @@ InterpolatedPtr Herb::planToEndEffectorOffset(MetaSkeletonStateSpacePtr _space,
       getSelfCollisionConstraint(_space), 
       createTestableBounds(_space),
       createProjectableBounds(_space), 
-      _timelimit, mCollisionResolution);
+      _timelimit, std::numeric_limits<double>::infinity(),
+      mCollisionResolution, mCollisionResolution*0.5, mCollisionResolution);
+
   return untimedTrajectory;
 }
 
