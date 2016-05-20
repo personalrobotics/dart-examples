@@ -1,8 +1,9 @@
 #include <iostream>
 #include <dart/dart.h>
+#include <ros/ros.h>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/perception/AprilTagsModule.hpp>
-#include <aikido/perception/YamlFileLoader.hpp>
+#include <aikido/perception/YamlAprilTagsDatabase.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
 
 static const std::string topicName("dart_markers");
@@ -11,8 +12,7 @@ int main(int argc, char **argv)
 {
 
 	const std::string robotUrdfUri(argv[1]);
-	const std::string objectUrdfFolder(argv[2]);
-	const std::string configDataURI(argv[3]);
+	const std::string configDataURI(argv[2]);
 
 	// Resolves package:// URIs by emulating the behavior of 'catkin_find'.
 	auto resourceRetriever
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	robotUrdfUri, resourceRetriever);
 
   //Load config data
-  std::shared_ptr<aikido::perception::YamlFileLoader> yaml_loader(new aikido::perception::YamlFileLoader(resourceRetriever,configDataURI));
+  std::shared_ptr<aikido::perception::YamlAprilTagsDatabase> yaml_loader(new aikido::perception::YamlAprilTagsDatabase(resourceRetriever,configDataURI));
   //aikido::perception::ConfigDataLoader cdl(resourceRetriever,configDataURI);
   //cdl.loadConfigData();
 
@@ -56,12 +56,12 @@ int main(int argc, char **argv)
 	//Test perception
 
 	aikido::perception::AprilTagsModule at_detector(nh,"/apriltags_kinect2/marker_array",
-				yaml_loader, resourceRetriever,	objectUrdfFolder,"herb_base",
+				yaml_loader, resourceRetriever,	"herb_base",
 				herb_base_node);
 
 	std::vector< dart::dynamics::SkeletonPtr > skeleton_list;
 
-	at_detector.detectObjects(skeleton_list,10.0);
+	at_detector.detectObjects(skeleton_list,ros::Duration(10.0));
 	std::cout << "Detection don - " << skeleton_list.size()<<" skeletons!"<<std::endl;
 	
 	for (dart::dynamics::SkeletonPtr skel : skeleton_list){
