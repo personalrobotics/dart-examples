@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.8)
 project(dart_examples)
 
 find_package(catkin REQUIRED)
-find_package(DART REQUIRED COMPONENTS core)
+find_package(DART REQUIRED utils-urdf)
 find_package(aikido REQUIRED COMPONENTS
   constraint
   distance
