@@ -1,7 +1,7 @@
 #ifndef DARTEXAMPLES_HERB_HPP_
 #define DARTEXAMPLES_HERB_HPP_
 
-#include <dart/dart.h>
+#include <dart/dart.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
 #include <aikido/trajectory/Interpolated.hpp>
 #include <aikido/trajectory/Trajectory.hpp>

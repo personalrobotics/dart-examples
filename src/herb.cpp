@@ -16,6 +16,7 @@
 #include <aikido/util/RNG.hpp>
 #include <aikido/util/StepSequence.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <dart/utils/urdf/DartLoader.hpp>
 
 using aikido::constraint::CyclicSampleable;
 using aikido::constraint::FrameDifferentiable;

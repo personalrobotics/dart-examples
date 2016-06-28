@@ -1,6 +1,6 @@
 #include "herb.hpp"
 #include <iostream>
-#include <dart/dart.h>
+#include <dart/dart.hpp>
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
