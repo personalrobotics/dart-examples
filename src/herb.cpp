@@ -262,7 +262,8 @@ Herb::getSelfCollisionConstraint(MetaSkeletonStateSpacePtr _space) const {
     "/left/wam1",
     "/right/wam1",
     "/left/wam6",
-    "/right/wam6"
+    "/right/wam6",
+    "/head/wam2"
   };
   for (const auto& bodyNodeName : disableCollisions)
     mRobot->getBodyNode(bodyNodeName)->setCollidable(false);
