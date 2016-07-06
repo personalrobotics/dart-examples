@@ -121,14 +121,25 @@ int main(int argc, char** argv)
 
   static const std::string urdfUri{
     "package://val_description/model/urdf/valkyrie_D.urdf"};
+#if 0
   static const std::string topicName{
     "/joint_trajectory_position_controller/follow_joint_trajectory"};
   static const std::vector<std::string> jointNames{
     "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
+#else
+  static const std::string topicName{
+    "/joint_trajectory_effort_controller/follow_joint_trajectory"};
+  static const std::vector<std::string> jointNames{
+    "rightShoulderPitch", "rightShoulderRoll", "rightShoulderYaw",
+    "rightElbowPitch"};
+  static const Eigen::Vector4d trajectoryEndpoint{
+    0.161101, 0.214281, 0.2127471, 1.419200};
+#endif
   static const std::chrono::milliseconds controlPeriod{20};
   static const double timestep{0.05};
   static const double goalTimeTolerance{0.5};
   static const double startupTimeTolerance{1.0};
+  static const double trajectoryDuration{5.};
 
   ROS_INFO("Starting ROS node.");
   ros::init(argc, argv, "ex05_control");
@@ -160,11 +171,11 @@ int main(int argc, char** argv)
   const auto trajectory = std::make_shared<SplineTrajectory>(stateSpace);
 
   Eigen::MatrixXd coefficients{metaSkeleton->getNumDofs(), 2};
-  coefficients.col(0).setZero();
-  coefficients.col(1).setConstant(1.);
+  coefficients.col(0) = trajectoryEndpoint;
+  coefficients.col(1).setZero();
 
   auto state = stateSpace->createState();
-  trajectory->addSegment(coefficients, 1., state);
+  trajectory->addSegment(coefficients, trajectoryDuration, state);
 
   ROS_INFO("Starting executor.");
   RosTrajectoryExecutor executor{metaSkeleton, nh, topicName, timestep,
