@@ -177,7 +177,16 @@ int main(int argc, char** argv)
 
   ROS_INFO("Waiting for trajectory to finish.");
   trajectoryFuture.wait();
-  trajectoryFuture.get();
+
+  try
+  {
+    trajectoryFuture.get();
+  }
+  catch (const std::runtime_error& e)
+  {
+    ROS_ERROR("%s", e.what());
+    return 1;
+  }
 
   ROS_INFO("Exiting.");
   return 0;
