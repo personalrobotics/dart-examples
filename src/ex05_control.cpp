@@ -1,4 +1,5 @@
 #include <chrono>
+#include <aikido/control/ros/RosJointStateClient.hpp>
 #include <aikido/control/ros/RosTrajectoryExecutor.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
 #include <aikido/trajectory/Spline.hpp>
@@ -112,6 +113,7 @@ void ExecutorMultiplexer::operator ()()
 //=============================================================================
 int main(int argc, char** argv)
 {
+  using aikido::control::ros::RosJointStateClient;
   using aikido::control::ros::RosTrajectoryExecutor;
   using aikido::statespace::dart::MetaSkeletonStateSpace;
   using aikido::rviz::InteractiveMarkerViewer;
@@ -122,6 +124,7 @@ int main(int argc, char** argv)
   using SplineTrajectory = aikido::trajectory::Spline;
 
   static const std::string markerTopic{"dart_markers"};
+  static const std::string jointStateTopic{"joint_states"};
   static const std::string urdfUri{
     "package://val_description/model/urdf/valkyrie_D.urdf"};
 #if 0
@@ -161,11 +164,6 @@ int main(int argc, char** argv)
     = std::make_shared<aikido::util::CatkinResourceRetriever>();
   const auto skeleton = urdfLoader.parseSkeleton(urdfUri, resourceRetriever);
 
-  ROS_INFO("Creating viewer.");
-  InteractiveMarkerViewer viewer{markerTopic};
-  viewer.addSkeleton(skeleton);
-  viewer.setAutoUpdate(true);
-
   ROS_INFO("Creating MetaSkeleton.");
   std::vector<Joint*> metaSkeletonJoints;
   for (const auto& jointName : jointNames)
@@ -173,6 +171,22 @@ int main(int argc, char** argv)
 
   const auto metaSkeleton = Group::create("RightShoulder");
   metaSkeleton->addJoints(metaSkeletonJoints, true, true);
+
+  ROS_INFO("Creating viewer.");
+  InteractiveMarkerViewer viewer{markerTopic};
+  viewer.addSkeleton(skeleton);
+  viewer.setAutoUpdate(true);
+
+  ROS_INFO("Creating JointState client.");
+  RosJointStateClient jointStateClient{skeleton, nh, jointStateTopic};
+  executorCallback.addCallback(
+    std::bind(&RosJointStateClient::spin, &jointStateClient));
+
+  ROS_INFO("Creating TrajectoryExecutor client.");
+  RosTrajectoryExecutor trajectoryClient{metaSkeleton, nh,
+    trajectoryTopicNamespace, timestep, goalTimeTolerance};
+  executorCallback.addCallback(
+    std::bind(&RosTrajectoryExecutor::spin, &trajectoryClient));
 
   ROS_INFO("Creating SplineTrajectory.");
   const auto stateSpace = std::make_shared<MetaSkeletonStateSpace>(metaSkeleton);
@@ -185,14 +199,8 @@ int main(int argc, char** argv)
   auto state = stateSpace->createState();
   trajectory->addSegment(coefficients, trajectoryDuration, state);
 
-  ROS_INFO("Starting executor.");
-  RosTrajectoryExecutor executor{metaSkeleton, nh, trajectoryTopicNamespace,
-    timestep, goalTimeTolerance};
-  executorCallback.addCallback(
-    std::bind(&RosTrajectoryExecutor::spin, &executor));
-
   ROS_INFO("Executing trajectory.");
-  auto trajectoryFuture = executor.execute(trajectory);
+  auto trajectoryFuture = trajectoryClient.execute(trajectory);
 
   ROS_INFO("Waiting for trajectory to finish.");
   trajectoryFuture.wait();
