@@ -2,6 +2,7 @@
 #include <aikido/control/ros/RosTrajectoryExecutor.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
 #include <aikido/trajectory/Spline.hpp>
+#include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
@@ -111,14 +112,16 @@ void ExecutorMultiplexer::operator ()()
 //=============================================================================
 int main(int argc, char** argv)
 {
-  using aikido::statespace::dart::MetaSkeletonStateSpace;
   using aikido::control::ros::RosTrajectoryExecutor;
+  using aikido::statespace::dart::MetaSkeletonStateSpace;
+  using aikido::rviz::InteractiveMarkerViewer;
   using dart::dynamics::Group;
   using dart::dynamics::Joint;
   using dart::utils::DartLoader;
 
   using SplineTrajectory = aikido::trajectory::Spline;
 
+  static const std::string markerTopic{"dart_markers"};
   static const std::string urdfUri{
     "package://val_description/model/urdf/valkyrie_D.urdf"};
 #if 0
@@ -127,8 +130,8 @@ int main(int argc, char** argv)
   static const std::vector<std::string> jointNames{
     "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
 #else
-  static const std::string topicName{
-    "/joint_trajectory_effort_controller/follow_joint_trajectory"};
+  static const std::string trajectoryTopicNamespace{
+    "joint_trajectory_effort_controller/follow_joint_trajectory"};
   static const std::vector<std::string> jointNames{
     "rightShoulderPitch", "rightShoulderRoll", "rightShoulderYaw",
     "rightElbowPitch"};
@@ -158,6 +161,11 @@ int main(int argc, char** argv)
     = std::make_shared<aikido::util::CatkinResourceRetriever>();
   const auto skeleton = urdfLoader.parseSkeleton(urdfUri, resourceRetriever);
 
+  ROS_INFO("Creating viewer.");
+  InteractiveMarkerViewer viewer{markerTopic};
+  viewer.addSkeleton(skeleton);
+  viewer.setAutoUpdate(true);
+
   ROS_INFO("Creating MetaSkeleton.");
   std::vector<Joint*> metaSkeletonJoints;
   for (const auto& jointName : jointNames)
@@ -178,8 +186,8 @@ int main(int argc, char** argv)
   trajectory->addSegment(coefficients, trajectoryDuration, state);
 
   ROS_INFO("Starting executor.");
-  RosTrajectoryExecutor executor{metaSkeleton, nh, topicName, timestep,
-    goalTimeTolerance};
+  RosTrajectoryExecutor executor{metaSkeleton, nh, trajectoryTopicNamespace,
+    timestep, goalTimeTolerance};
   executorCallback.addCallback(
     std::bind(&RosTrajectoryExecutor::spin, &executor));
 
@@ -192,13 +200,16 @@ int main(int argc, char** argv)
   try
   {
     trajectoryFuture.get();
+    ROS_INFO("Execution succeeded.");
   }
   catch (const std::runtime_error& e)
   {
     ROS_ERROR("%s", e.what());
-    return 1;
   }
 
+  ROS_INFO("Done. Press <Ctrl> + C to exit.");
+  ros::spin();
   ROS_INFO("Exiting.");
+
   return 0;
 }
