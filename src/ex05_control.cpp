@@ -5,110 +5,14 @@
 #include <aikido/trajectory/Spline.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
+#include <aikido/util/ExecutorMultiplexer.hpp>
+#include <aikido/util/ExecutorThread.hpp>
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
 #include <ros/ros.h>
 
-//=============================================================================
-class ExecutorThread final
-{
-public:
-  ExecutorThread(
-    std::function<void ()> _callback,
-    std::chrono::milliseconds _period);
-
-  ~ExecutorThread();
-
-  bool is_running() const;
-
-  void stop();
-
-private:
-  void spin();
-
-  std::function<void ()> mCallback;
-  std::chrono::milliseconds mPeriod;
-  std::atomic<bool> mIsRunning;
-  std::thread mThread;
-};
-
-//=============================================================================
-ExecutorThread::ExecutorThread(
-      std::function<void ()> _callback,
-      std::chrono::milliseconds _period)
-  : mCallback{std::move(_callback)}
-  , mPeriod{_period}
-  , mIsRunning{true}
-{
-  mThread = std::thread(&ExecutorThread::spin, this);
-}
-
-//=============================================================================
-ExecutorThread::~ExecutorThread()
-{
-  stop();
-}
-
-//=============================================================================
-bool ExecutorThread::is_running() const
-{
-  return mIsRunning.load();
-}
-
-//=============================================================================
-void ExecutorThread::stop()
-{
-  ROS_INFO("Stopping executor thread.");
-  mIsRunning.store(false);
-  mThread.join();
-}
-
-//=============================================================================
-void ExecutorThread::spin()
-{
-  auto currentTime = std::chrono::steady_clock::now();
-
-  while (mIsRunning.load())
-  {
-    mCallback();
-
-    currentTime += mPeriod;
-    std::this_thread::sleep_until(currentTime);
-  }
-
-  ROS_INFO("Exiting executor thread.");
-}
-
-//=============================================================================
-class ExecutorMultiplexer final
-{
-public:
-  ExecutorMultiplexer() = default;
-
-  void addCallback(std::function<void ()> _callback);
-
-  void operator ()();
-
-private:
-  std::mutex mMutex;
-  std::vector<std::function<void ()>> mCallbacks;
-};
-
-//=============================================================================
-void ExecutorMultiplexer::addCallback(std::function<void ()> _callback)
-{
-  std::lock_guard<std::mutex> lock{mMutex};
-  mCallbacks.emplace_back(std::move(_callback));
-}
-
-//=============================================================================
-void ExecutorMultiplexer::operator ()()
-{
-  std::lock_guard<std::mutex> lock{mMutex};
-
-  for (auto& callback : mCallbacks)
-    callback();
-}
+using aikido::util::ExecutorMultiplexer;
+using aikido::util::ExecutorThread;
 
 //=============================================================================
 int main(int argc, char** argv)
@@ -121,6 +25,7 @@ int main(int argc, char** argv)
   using dart::dynamics::Joint;
   using dart::utils::DartLoader;
 
+  using Vector7d = Eigen::Matrix<double, 7, 1>;
   using SplineTrajectory = aikido::trajectory::Spline;
 
   static const std::string markerTopic{"dart_markers"};
@@ -134,12 +39,11 @@ int main(int argc, char** argv)
     "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
 #else
   static const std::string trajectoryTopicNamespace{
-    "joint_trajectory_effort_controller/follow_joint_trajectory"};
+    "/trajectory_controller/follow_joint_trajectory"};
   static const std::vector<std::string> jointNames{
     "rightShoulderPitch", "rightShoulderRoll", "rightShoulderYaw",
-    "rightElbowPitch"};
-  static const Eigen::Vector4d goalPosition{
-    0.161101, 0.214281, 0.2127471, 1.419200};
+    "rightElbowPitch", "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
+  static const Vector7d goalPosition = Vector7d::Zero();
 #endif
   static const std::chrono::milliseconds controlPeriod{20};
   static const double timestep{0.05};
