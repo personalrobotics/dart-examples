@@ -32,24 +32,17 @@ int main(int argc, char** argv)
   static const std::string jointStateTopic{"joint_states"};
   static const std::string urdfUri{
     "package://val_description/model/urdf/valkyrie_D.urdf"};
-#if 0
-  static const std::string topicName{
-    "/joint_trajectory_position_controller/follow_joint_trajectory"};
-  static const std::vector<std::string> jointNames{
-    "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
-#else
   static const std::string trajectoryTopicNamespace{
     "/trajectory_controller/follow_joint_trajectory"};
   static const std::vector<std::string> jointNames{
     "rightShoulderPitch", "rightShoulderRoll", "rightShoulderYaw",
     "rightElbowPitch", "rightForearmYaw", "rightWristRoll", "rightWristPitch"};
   static const Vector7d goalPosition = Vector7d::Zero();
-#endif
   static const std::chrono::milliseconds controlPeriod{20};
   static const double timestep{0.05};
   static const double goalTimeTolerance{0.5};
   static const double startupTimeTolerance{1.0};
-  static const double trajectoryDuration{5.};
+  static const double trajectoryDuration{2.};
   static const size_t jointStateQueueLength{100};
 
   ROS_INFO_STREAM("Starting ROS node.");
@@ -77,12 +70,6 @@ int main(int argc, char** argv)
   const auto metaSkeleton = Group::create("RightShoulder");
   metaSkeleton->addJoints(metaSkeletonJoints, true, true);
 
-  ROS_INFO_STREAM("Creating viewer.");
-  InteractiveMarkerViewer viewer{markerTopic};
-  viewer.addSkeleton(skeleton);
-  viewer.setAutoUpdate(true);
-  // TODO: Create another Skeleton to visualize the desired position.
-
   ROS_INFO_STREAM("Creating JointState client.");
   RosJointStateClient jointStateClient{skeleton, nh, jointStateTopic,
     jointStateQueueLength};
@@ -99,6 +86,12 @@ int main(int argc, char** argv)
   executorCallback.addCallback(
     std::bind(&RosTrajectoryExecutor::spin, &trajectoryClient));
 
+  ROS_INFO_STREAM("Creating viewer.");
+  InteractiveMarkerViewer viewer{markerTopic};
+  viewer.addSkeleton(skeleton);
+  viewer.setAutoUpdate(true);
+  // TODO: Create another Skeleton to visualize the desired position.
+
   ROS_INFO_STREAM("Creating SplineTrajectory.");
   const auto stateSpace = std::make_shared<MetaSkeletonStateSpace>(metaSkeleton);
   const auto trajectory = std::make_shared<SplineTrajectory>(stateSpace);
@@ -109,6 +102,9 @@ int main(int argc, char** argv)
 
   auto state = stateSpace->createState();
   trajectory->addSegment(coefficients, trajectoryDuration, state);
+
+  std::cout << "Press <ENTER> to execute." << std::endl;
+  std::cin.get();
 
   ROS_INFO_STREAM("Executing trajectory.");
   auto trajectoryFuture = trajectoryClient.execute(trajectory);

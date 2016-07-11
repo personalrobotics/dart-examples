@@ -9,7 +9,7 @@ if(POLICY CMP0042)
 endif()
 
 find_package(catkin REQUIRED)
-find_package(DART REQUIRED utils-urdf CONFIG)
+find_package(DART REQUIRED utils utils-urdf CONFIG)
 find_package(aikido REQUIRED COMPONENTS
   constraint
   control_ros
