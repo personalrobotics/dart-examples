@@ -51,26 +51,32 @@ int main(int argc, char **argv) {
 
   const auto velocityLimits = robot.getVelocityLimits(*rightArm);
   const auto accelerationLimits = robot.getAccelerationLimits(*rightArm);
-  const auto constraintTolerance = 0.025;
+  const auto constraintTolerance = 0.05;
   const auto interpolationTimestep = 0.05;
 
-  std::shared_ptr<Spline> timedTrajectory
+  std::shared_ptr<Spline> mintosTrajectory 
     = interpolateAndTimeOptimizeTrajectory(
         *untimedTrajectory, actualConstraint,
         -velocityLimits, velocityLimits,
         -accelerationLimits, accelerationLimits,
         constraintTolerance, interpolationTimestep);
+  auto parabolicTrajectory =
+      robot.retimeTrajectory(rightArmSpace, untimedTrajectory);
 
-#if 0
   ros::init(argc, argv, "ex05_mintos");
 
   InteractiveMarkerViewer viewer(topicName);
   viewer.addSkeleton(robot.getSkeleton());
   viewer.setAutoUpdate(true);
 
-  robot.execute(rightArmSpace, timedTrajectory);
+  std::cin.get();
+  ros::WallDuration(5).sleep();
+
+  robot.execute(rightArmSpace, mintosTrajectory);
+
+  ros::WallDuration(2).sleep();
+  robot.execute(rightArmSpace, parabolicTrajectory);
 
   std::cout << "Press <Ctrl> + C to exit." << std::endl;
   ros::spin();
-#endif
 }
