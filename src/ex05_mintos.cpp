@@ -3,6 +3,7 @@
 #include <dart/dart.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/constraint/TSR.hpp>
+#include <aikido/constraint/FrameDifferentiable.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
 #include <aikido/planner/mintos/MinTOS.hpp>
 
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
 
   const Eigen::Vector3d direction(0, 0, -1);
   const auto distance = 0.3;
-  const auto endEffector = robot.getRightEndEffector();
+  auto endEffector = robot.getRightEndEffector();
   auto untimedTrajectory = robot.planToEndEffectorOffset(
       rightArmSpace, endEffector.get(),
       direction, distance, planningTimeout);
@@ -43,16 +44,19 @@ int main(int argc, char **argv) {
   constraint->mBw << -epsilon, epsilon, 
       -epsilon, epsilon, std::min(0., distance), std::max(0., distance),
       -epsilon, epsilon, -epsilon, epsilon, -epsilon, epsilon;
+
+  aikido::constraint::FrameDifferentiable actualConstraint(
+    rightArmSpace, endEffector.get(), constraint);
   // Debug
 
   const auto velocityLimits = robot.getVelocityLimits(*rightArm);
   const auto accelerationLimits = robot.getAccelerationLimits(*rightArm);
-  const auto constraintTolerance = 0.01;
+  const auto constraintTolerance = 0.025;
   const auto interpolationTimestep = 0.05;
 
   std::shared_ptr<Spline> timedTrajectory
     = interpolateAndTimeOptimizeTrajectory(
-        *untimedTrajectory, *constraint,
+        *untimedTrajectory, actualConstraint,
         -velocityLimits, velocityLimits,
         -accelerationLimits, accelerationLimits,
         constraintTolerance, interpolationTimestep);
