@@ -1,7 +1,9 @@
 #include "herb.hpp"
+#include "ConfigurationTestable.hpp"
 #include <aikido/constraint/CyclicSampleable.hpp>
 #include <aikido/constraint/FrameDifferentiable.hpp>
 #include <aikido/constraint/FrameTestable.hpp>
+#include <aikido/constraint/FiniteSampleable.hpp>
 #include <aikido/constraint/InverseKinematicsSampleable.hpp>
 #include <aikido/constraint/JointStateSpaceHelpers.hpp>
 #include <aikido/constraint/NewtonsMethodProjectable.hpp>
@@ -66,6 +68,10 @@ Herb::Herb() : mCollisionResolution(0.02) {
   mRightEndEffector = mRobot->getBodyNode("/right/wam7");
   mRightArm = Chain::create(rightArmBase, mRightEndEffector, "right_arm");
 
+  auto leftArmBase = mRobot->getBodyNode("/left/wam_base");
+  mLeftEndEffector = mRobot->getBodyNode("/left/wam7");
+  mLeftArm = Chain::create(leftArmBase, mLeftEndEffector, "left_arm");
+
   mRightIk = InverseKinematics::create(mRightEndEffector);
   mRightIk->setDofs(mRightArm->getDofs());
 }
@@ -75,6 +81,10 @@ SkeletonPtr Herb::getSkeleton() const { return mRobot; }
 ChainPtr Herb::getRightArm() const { return mRightArm; }
 
 BodyNodePtr Herb::getRightEndEffector() const { return mRightEndEffector; }
+
+ChainPtr Herb::getLeftArm() const { return mLeftArm; }
+
+BodyNodePtr Herb::getLeftEndEffector() const { return mLeftEndEffector; }
 
 Eigen::VectorXd Herb::getVelocityLimits(MetaSkeleton &_metaSkeleton) const {
   Eigen::VectorXd velocityLimits(_metaSkeleton.getNumDofs());
@@ -116,19 +126,40 @@ InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
   _space->convertPositionsToState(_goal, goalState);
 
   auto rng = make_unique<RNGWrapper<std::default_random_engine>>(0);
+  auto constraint = std::make_shared<DistanceConstraint>(point_to_avoid, 0.2);
 
-  auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
-      startState,
-      goalState,
+  auto untimedTrajectory = planCRRTConnect(
+      startState, 
+      std::make_shared<ConfigurationTestable>(_space, goalState);
+      std::make_shared<FiniteSampleable>(
+          _space, 
+          goalState
+        ),
+      std::make_shared<NewtonsMethodProjectable>(
+          std::make_shared<FrameDifferentiable>(
+              _space, _endEffector, constraint),
+          std::vector<double>(6, 1e-4)),
       _space,
       std::make_shared<GeodesicInterpolator>(_space),
       createDistanceMetric(_space),
-      createSampleableBounds(_space, std::move(rng)),
-      getSelfCollisionConstraint(_space),
+      createSampleableBounds(_space, std::move(engines[1])),
+      getSelfCollisionConstraint(_space), 
       createTestableBounds(_space),
-      createProjectableBounds(_space),
-      _timelimit, mCollisionResolution
-    );
+      createProjectableBounds(_space), 
+      _timelimit, std::numeric_limits<double>::infinity(),
+      mCollisionResolution, mCollisionResolution*0.5, mCollisionResolution);
+  // auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
+  //     startState,
+  //     goalState,
+  //     _space,
+  //     std::make_shared<GeodesicInterpolator>(_space),
+  //     createDistanceMetric(_space),
+  //     createSampleableBounds(_space, std::move(rng)),
+  //     getSelfCollisionConstraint(_space),
+  //     createTestableBounds(_space),
+  //     createProjectableBounds(_space),
+  //     _timelimit, mCollisionResolution
+  //   );
 
   return untimedTrajectory;
 }

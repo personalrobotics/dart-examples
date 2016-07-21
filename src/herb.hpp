@@ -27,6 +27,12 @@ public:
   /// Get the right end-effector
   dart::dynamics::BodyNodePtr getRightEndEffector() const;
 
+  /// Get the left arm
+  dart::dynamics::ChainPtr getLeftArm() const;
+
+  /// Get the left end-effector
+  dart::dynamics::BodyNodePtr getLeftEndEffector() const;
+
   /// Compute velocity limits from the MetaSkeleton
   Eigen::VectorXd
   getVelocityLimits(dart::dynamics::MetaSkeleton &_metaSkeleton) const;
@@ -81,6 +87,8 @@ private:
   dart::dynamics::SkeletonPtr mRobot;
   dart::dynamics::ChainPtr mRightArm;
   dart::dynamics::BodyNodePtr mRightEndEffector;
+  dart::dynamics::ChainPtr mLeftArm;
+  dart::dynamics::BodyNodePtr mLeftEndEffector;
   dart::dynamics::InverseKinematicsPtr mRightIk;
 };
 
