@@ -1,6 +1,7 @@
 #include "herb.hpp"
 #include "DistanceConstraint.hpp"
 #include <iostream>
+#include <fstream>
 #include <dart/dart.hpp>
 #include <aikido/distance/defaults.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
@@ -13,6 +14,7 @@
 #include <aikido/constraint/CyclicSampleable.hpp>
 #include <aikido/constraint/InverseKinematicsSampleable.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
+#include <aikido/util/StepSequence.hpp>
 #include <aikido/planner/mintos/MinTOS.hpp>
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/rviz/ShapeFrameMarker.hpp>
@@ -34,6 +36,7 @@ using aikido::constraint::createTestableBounds;
 using aikido::constraint::createProjectableBounds;
 using aikido::planner::mintos::interpolateAndTimeOptimizeTrajectory;
 using aikido::trajectory::Spline;
+using aikido::util::StepSequence;
 using dart::dynamics::Frame;
 using dart::dynamics::SimpleFrame;
 using aikido::util::RNGWrapper;
@@ -43,11 +46,34 @@ static const double planningTimeout{60.};
 static const int numIkTrials{10};
 static const double constraintTolerance{1e-4};
 static const Eigen::Vector3d goalOffset{0., 0.4, 0.};
+static const double serializationTimestep{0.01};
 
 static const Eigen::VectorXd velocityLimit
   = Eigen::VectorXd::Constant(7, 2.5);
 static const Eigen::VectorXd accelerationLimit
   = Eigen::VectorXd::Constant(7, 2.0);
+
+static void serializeTrajectory(
+  const aikido::trajectory::Trajectory& trajectory, double timestep,
+  std::ostream& stream)
+{
+  const Eigen::IOFormat formatCsv(
+    Eigen::StreamPrecision, Eigen::DontAlignCols, ",", "\n", "", "", "", "");
+
+  const auto space = trajectory.getStateSpace();
+  auto state = space->createState();
+  Eigen::VectorXd tangentVector;
+
+  StepSequence timeSequence(
+    timestep, true, trajectory.getStartTime(), trajectory.getEndTime());
+  for (const auto timeFromStart : timeSequence)
+  {
+    trajectory.evaluate(timeFromStart, state);
+    space->logMap(state, tangentVector);
+    stream << timeFromStart << ","
+      << tangentVector.transpose().format(formatCsv) << "\n";
+  }
+}
 
 int main(int argc, char **argv)
 {
@@ -63,7 +89,8 @@ int main(int argc, char **argv)
   auto rightArmSpace = std::make_shared<MetaSkeletonStateSpace>(rightArm);
   auto endEffector = robot.getRightEndEffector();
 
-  auto seedEngine = RNGWrapper<std::default_random_engine>(0);
+  std::random_device randomDevice;
+  auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
   auto engines = splitEngine(seedEngine, 3);
 
   // Hard-coded start configuration.
@@ -162,7 +189,6 @@ int main(int argc, char **argv)
   auto parabolicTrajectory =
       robot.retimeTrajectory(rightArmSpace, untimedTrajectory);
 
-#if 1
   std::cout << "Retiming with MinTOS..." << std::endl;
   const auto velocityLimits = robot.getVelocityLimits(*rightArm);
   const auto accelerationLimits = robot.getAccelerationLimits(*rightArm);
@@ -174,9 +200,14 @@ int main(int argc, char **argv)
           -velocityLimits, velocityLimits,
           -accelerationLimits, accelerationLimits, constraintTolerance,
           interpolationTimestep);
-#else
-  const auto mintosTrajectory = parabolicTrajectory;
-#endif
+
+  {
+    std::ofstream parabolicOutput("/tmp/parabolic.csv");
+    serializeTrajectory(*parabolicTrajectory, serializationTimestep, parabolicOutput);
+
+    std::ofstream mintosOutput("/tmp/mintos.csv");
+    serializeTrajectory(*mintosTrajectory, serializationTimestep, mintosOutput);
+  }
 
   std::cout
     << "ParabolicTimer duration: " << parabolicTrajectory->getDuration() << "\n"
