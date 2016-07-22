@@ -52,26 +52,33 @@ int main(int argc, char **argv)
   const auto constraintTolerance = 0.05;
   const auto interpolationTimestep = 0.05;
 
+  std::cout << "Retiming with MinTOS..." << std::endl;
   std::shared_ptr<Spline> mintosTrajectory =
       interpolateAndTimeOptimizeTrajectory(
           *untimedTrajectory, actualConstraint, -velocityLimits, velocityLimits,
           -accelerationLimits, accelerationLimits, constraintTolerance,
           interpolationTimestep);
+
+  std::cout << "Retiming with parabolic..." << std::endl;
   auto parabolicTrajectory =
       robot.retimeTrajectory(rightArmSpace, untimedTrajectory);
 
+  std::cout << "Initializing ROS and viewer..." << std::endl;
   ros::init(argc, argv, "ex05_mintos");
 
   InteractiveMarkerViewer viewer(topicName);
   viewer.addSkeleton(robot.getSkeleton());
   viewer.setAutoUpdate(true);
 
+  std::cout << "Press Return to continue..." << std::endl;
   std::cin.get();
   ros::WallDuration(5).sleep();
 
+  std::cout << "Executing MinTOS trajectory..." << std::endl;
   robot.execute(rightArmSpace, mintosTrajectory);
 
   ros::WallDuration(2).sleep();
+  std::cout << "Executing parabolic trajectory..." << std::endl;
   robot.execute(rightArmSpace, parabolicTrajectory);
 
   std::cout << "Press <Ctrl> + C to exit." << std::endl;

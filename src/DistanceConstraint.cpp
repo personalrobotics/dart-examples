@@ -1,5 +1,4 @@
 #include "DistanceConstraint.hpp"
-#include <cassert>
 #include <cmath>
 #include <dart/math/math.hpp>
 
@@ -75,7 +74,7 @@ void DistanceConstraint::getValue(const statespace::StateSpace::State* _s,
 
   _out.resize(1);
 
-  _out[0] = abs(dist3d.norm() - distance);
+  _out[0] = std::abs(dist3d.norm() - distance);
 }
 
 void DistanceConstraint::getJacobian(const statespace::StateSpace::State* _s,
@@ -96,8 +95,6 @@ void DistanceConstraint::getJacobian(const statespace::StateSpace::State* _s,
   double y_0 = point[1];
   double z = state_pt[2];
   double z_0 = point[2];
-
-  assert(d2 == pow(x - x_0, 2) + pow(y - y_0, 2) + pow(z - z_0, 2));
 
   // clang-format off
   _out(0,0) = 2*x - x_0 + pow(y, 2) - y*y_0 + pow(y_0, 2) + pow(z, 2) - z*z_0 + pow(z_0, 2);  // ∂d2/∂x
