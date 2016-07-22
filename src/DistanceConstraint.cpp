@@ -76,7 +76,6 @@ void DistanceConstraint::getValue(const statespace::StateSpace::State* _s,
   _out.resize(1);
 
   _out[0] = abs(dist3d.norm() - distance);
-  std::cout << "val   : " << _out[0] << std::endl;
 }
 
 void DistanceConstraint::getJacobian(const statespace::StateSpace::State* _s,

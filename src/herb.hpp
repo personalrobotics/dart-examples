@@ -1,6 +1,7 @@
 #ifndef DARTEXAMPLES_HERB_HPP_
 #define DARTEXAMPLES_HERB_HPP_
 
+#include "DistanceConstraint.hpp"
 #include <dart/dart.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
 #include <aikido/trajectory/Interpolated.hpp>
@@ -51,6 +52,7 @@ public:
   /// Plan the robot to a specific configuration
   aikido::trajectory::InterpolatedPtr planToConfiguration(
       aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
+      dart::dynamics::ConstJacobianNodePtr _endEffector,
       const Eigen::VectorXd &_goal, double _timelimit) const;
 
   /// Plan to a goal region defined as a Task Space Region

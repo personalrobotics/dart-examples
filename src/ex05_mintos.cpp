@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
   auto endEffector = robot.getRightEndEffector();
   auto untimedTrajectory = robot.planToConfiguration(
-      rightArmSpace, endConfiguration, planningTimeout);
+      rightArmSpace, endEffector.get(), endConfiguration, planningTimeout);
   if (!untimedTrajectory) throw std::runtime_error("Failed to find a solution");
 
   Eigen::Vector3d point_to_avoid{0.88, -0.12, 0.91};  // in front of Herb

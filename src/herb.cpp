@@ -23,6 +23,7 @@
 using aikido::constraint::CyclicSampleable;
 using aikido::constraint::FrameDifferentiable;
 using aikido::constraint::FrameTestable;
+using aikido::constraint::FiniteSampleable;
 using aikido::constraint::InverseKinematicsSampleable;
 using aikido::constraint::NewtonsMethodProjectable;
 using aikido::constraint::NonColliding;
@@ -119,6 +120,7 @@ void Herb::setConfiguration(MetaSkeletonStateSpacePtr _space,
 }
 
 InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
+                                          ConstJacobianNodePtr _endEffector,
                                           const Eigen::VectorXd &_goal,
                                           double _timelimit) const {
   auto startState = _space->getScopedStateFromMetaSkeleton();
@@ -126,11 +128,13 @@ InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
   _space->convertPositionsToState(_goal, goalState);
 
   auto rng = make_unique<RNGWrapper<std::default_random_engine>>(0);
+
+  Eigen::Vector3d point_to_avoid{0.88, -0.12, 0.91};  // in front of Herb
   auto constraint = std::make_shared<DistanceConstraint>(point_to_avoid, 0.2);
 
   auto untimedTrajectory = planCRRTConnect(
       startState, 
-      std::make_shared<ConfigurationTestable>(_space, goalState);
+      std::make_shared<ConfigurationTestable>(_space, goalState),
       std::make_shared<FiniteSampleable>(
           _space, 
           goalState
@@ -138,11 +142,11 @@ InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
       std::make_shared<NewtonsMethodProjectable>(
           std::make_shared<FrameDifferentiable>(
               _space, _endEffector, constraint),
-          std::vector<double>(6, 1e-4)),
+          std::vector<double>(1, 1e-4)),
       _space,
       std::make_shared<GeodesicInterpolator>(_space),
       createDistanceMetric(_space),
-      createSampleableBounds(_space, std::move(engines[1])),
+      createSampleableBounds(_space, std::move(rng)),
       getSelfCollisionConstraint(_space), 
       createTestableBounds(_space),
       createProjectableBounds(_space), 

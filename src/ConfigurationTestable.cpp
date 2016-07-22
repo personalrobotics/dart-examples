@@ -6,33 +6,32 @@ using statespace::dart::MetaSkeletonStateSpace;
 
 ConfigurationTestable::ConfigurationTestable(
     statespace::dart::MetaSkeletonStateSpacePtr stateSpace,
-    const statespace::StateSpace::State goalState)
-    : stateSpace{std::move(stateSpace)}
-    , goalConfiguration{}
+    const statespace::StateSpace::State* goalState)
+    : mStateSpace{std::move(stateSpace)}
 // , goalState{std::move(goalState)}
 {
-  if (!stateSpace) throw std::invalid_argument("stateSpace is nullptr");
-  if (!goalState) throw std::invalid_argument("goalState is null");
-  // goalStateSpace = std::dynamic_cast<statespace::SE3>(goalState);
-  // if (!goalStateSpace) throw std::invalid_argument("goalState is not in
-  // SE3");
+  if (!mStateSpace) throw std::invalid_argument("stateSpace is nullptr");
+  if (!goalState) throw std::invalid_argument("goalState is nullptr");
 
-  stateSpace->convertStateToPositions(goalState, goalConfiguration);
+  auto cartGoalState =
+      static_cast<const MetaSkeletonStateSpace::State*>(goalState);
+  mStateSpace->convertStateToPositions(cartGoalState, mGoalConfiguration);
 }
 
 // Documentation inherited
-bool ConfigurationTestable::isSatisfied(const StateSpace::State* _state) const
+bool ConfigurationTestable::isSatisfied(
+    const statespace::StateSpace::State* _state) const
 {
-  // auto currentState = static_cast<const
-  // MetaSkeletonStateSpace::State*>(_state);
+  auto current_state =
+      static_cast<const MetaSkeletonStateSpace::State*>(_state);
   Eigen::VectorXd curr_position;
-  stateSpace->convertStateToPositions(_state, curr_position);
-  return curr_position.isApprox(goalConfiguration);
+  mStateSpace->convertStateToPositions(current_state, curr_position);
+  return curr_position.isApprox(mGoalConfiguration);
 }
 
 // Documentation inherited
 std::shared_ptr<statespace::StateSpace> ConfigurationTestable::getStateSpace()
     const
 {
-  return stateSpace;
+  return mStateSpace;
 }

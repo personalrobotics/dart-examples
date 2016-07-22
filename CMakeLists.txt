@@ -38,6 +38,8 @@ target_link_libraries("${PROJECT_NAME}_herb"
   ${DART_LIBRARIES}
   ${aikido_LIBRARIES}
   ${aikido_rviz_LIBRARIES}
+  ${PROJECT_NAME}_distanceconstraint
+  ${PROJECT_NAME}_configurationtestable
 )
 
 add_library("${PROJECT_NAME}_distanceconstraint" src/DistanceConstraint.cpp)

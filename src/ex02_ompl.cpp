@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
       -1.43; // relaxed home
 
   auto untimedTrajectory = robot.planToConfiguration(
-      rightArmSpace, goalConfiguration, planningTimeout);
+    rightArmSpace, robot.getRightEndEffector().get(), goalConfiguration, planningTimeout);
   if (!untimedTrajectory)
     throw std::runtime_error("Failed to find a solution");
 

@@ -12,19 +12,19 @@ class ConfigurationTestable : public constraint::Testable
 {
 public:
   ConfigurationTestable(statespace::dart::MetaSkeletonStateSpacePtr stateSpace,
-                        const statespace::StateSpace::State goalState);
+                        const statespace::StateSpace::State* goalState);
 
   // Documentation inherited
-  bool isSatisfied(const StateSpace::State* _state) const override;
+  bool isSatisfied(const statespace::StateSpace::State* _state) const override;
 
   // Documentation inherited
   std::shared_ptr<statespace::StateSpace> getStateSpace() const override;
 
 private:
-  statespace::dart::MetaSkeletonStateSpacePtr stateSpace;
+  statespace::dart::MetaSkeletonStateSpacePtr mStateSpace;
   // std::shared_ptr<statespace::SE3> goalStateSpace;
   // statespace::StateSpace::State goalState;
-  Eigen::VectorXd goalConfiguration;
+  Eigen::VectorXd mGoalConfiguration;
 };
 
 #endif  // DARTEXAMPLES_CONFIGURATIONTESTABLE_HPP_
