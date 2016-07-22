@@ -55,6 +55,13 @@ public:
       dart::dynamics::ConstJacobianNodePtr _endEffector,
       const Eigen::VectorXd &_goal, double _timelimit) const;
 
+  aikido::trajectory::InterpolatedPtr planToConfigurationConstrained(
+    aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
+    dart::dynamics::ConstJacobianNodePtr _endEffector,
+    const Eigen::VectorXd &_goal,
+    const aikido::constraint::ProjectablePtr& _trajectoryConstraint,
+    double _timelimit) const;
+
   /// Plan to a goal region defined as a Task Space Region
   aikido::trajectory::InterpolatedPtr
   planToTSR(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
@@ -78,13 +85,12 @@ public:
   void execute(aikido::statespace::dart::MetaSkeletonStateSpacePtr _space,
                aikido::trajectory::TrajectoryPtr _traj);
 
-protected:
   /// Generate a constraint that is satisfied when the MetaSkeleton is not
   /// in
   /// self collision
   std::shared_ptr<aikido::constraint::NonColliding> getSelfCollisionConstraint(
       aikido::statespace::dart::MetaSkeletonStateSpacePtr _space) const;
-private:
+
   double mCollisionResolution;
   dart::dynamics::SkeletonPtr mRobot;
   dart::dynamics::ChainPtr mRightArm;

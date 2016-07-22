@@ -51,8 +51,8 @@ public:
   void getJacobian(const statespace::StateSpace::State* _s,
                    Eigen::MatrixXd& _out) const override;
 
-  Eigen::Vector3d point;
-  double distance;
+  Eigen::Vector3d center;
+  double radius;
   // ConstraintType type;
 
 private:

@@ -103,6 +103,7 @@ Eigen::VectorXd Herb::getAccelerationLimits(MetaSkeleton &_metaSkeleton) const {
   Eigen::VectorXd accelerationLimits(_metaSkeleton.getNumDofs());
 
   for (size_t i = 0; i < accelerationLimits.size(); ++i) {
+    // TODO: Remove this min(2.0).
     accelerationLimits[i] = std::min(2.0, 
         std::min(-_metaSkeleton.getAccelerationLowerLimit(i),
                  +_metaSkeleton.getAccelerationUpperLimit(i)));
@@ -119,6 +120,35 @@ void Herb::setConfiguration(MetaSkeletonStateSpacePtr _space,
   _space->setState(state);
 }
 
+InterpolatedPtr Herb::planToConfigurationConstrained(
+  MetaSkeletonStateSpacePtr _space,
+  ConstJacobianNodePtr _endEffector,
+  const Eigen::VectorXd& _goal,
+  const aikido::constraint::ProjectablePtr& _trajectoryConstraint,
+  double _timelimit) const
+{
+  auto rng = make_unique<RNGWrapper<std::default_random_engine>>(0);
+  auto startState = _space->getScopedStateFromMetaSkeleton();
+  auto goalState = _space->createState();
+  _space->convertPositionsToState(_goal, goalState);
+
+  auto untimedTrajectory = planCRRTConnect(
+    startState, 
+    std::make_shared<ConfigurationTestable>(_space, goalState),
+    std::make_shared<FiniteSampleable>(_space, goalState),
+    _trajectoryConstraint,
+    _space,
+    std::make_shared<GeodesicInterpolator>(_space),
+    createDistanceMetric(_space),
+    createSampleableBounds(_space, std::move(rng)),
+    getSelfCollisionConstraint(_space), 
+    createTestableBounds(_space),
+    createProjectableBounds(_space), 
+    _timelimit, std::numeric_limits<double>::infinity(),
+    mCollisionResolution, mCollisionResolution*0.5, mCollisionResolution
+  );
+}
+
 InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
                                           ConstJacobianNodePtr _endEffector,
                                           const Eigen::VectorXd &_goal,
@@ -128,42 +158,18 @@ InterpolatedPtr Herb::planToConfiguration(MetaSkeletonStateSpacePtr _space,
   _space->convertPositionsToState(_goal, goalState);
 
   auto rng = make_unique<RNGWrapper<std::default_random_engine>>(0);
-
-  Eigen::Vector3d point_to_avoid{0.88, -0.12, 0.91};  // in front of Herb
-  auto constraint = std::make_shared<DistanceConstraint>(point_to_avoid, 0.2);
-
-  auto untimedTrajectory = planCRRTConnect(
-      startState, 
-      std::make_shared<ConfigurationTestable>(_space, goalState),
-      std::make_shared<FiniteSampleable>(
-          _space, 
-          goalState
-        ),
-      std::make_shared<NewtonsMethodProjectable>(
-          std::make_shared<FrameDifferentiable>(
-              _space, _endEffector, constraint),
-          std::vector<double>(1, 1e-4)),
-      _space,
-      std::make_shared<GeodesicInterpolator>(_space),
-      createDistanceMetric(_space),
-      createSampleableBounds(_space, std::move(rng)),
-      getSelfCollisionConstraint(_space), 
-      createTestableBounds(_space),
-      createProjectableBounds(_space), 
-      _timelimit, std::numeric_limits<double>::infinity(),
-      mCollisionResolution, mCollisionResolution*0.5, mCollisionResolution);
-  // auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
-  //     startState,
-  //     goalState,
-  //     _space,
-  //     std::make_shared<GeodesicInterpolator>(_space),
-  //     createDistanceMetric(_space),
-  //     createSampleableBounds(_space, std::move(rng)),
-  //     getSelfCollisionConstraint(_space),
-  //     createTestableBounds(_space),
-  //     createProjectableBounds(_space),
-  //     _timelimit, mCollisionResolution
-  //   );
+  auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
+    startState,
+    goalState,
+    _space,
+    std::make_shared<GeodesicInterpolator>(_space),
+    createDistanceMetric(_space),
+    createSampleableBounds(_space, std::move(rng)),
+    getSelfCollisionConstraint(_space),
+    createTestableBounds(_space),
+    createProjectableBounds(_space),
+    _timelimit, mCollisionResolution
+  );
 
   return untimedTrajectory;
 }
