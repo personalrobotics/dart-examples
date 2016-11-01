@@ -8,9 +8,10 @@ find_package(aikido REQUIRED COMPONENTS
   distance
   planner_ompl
   planner_parabolic
+  rviz
   statespace
   util)
-find_package(aikido_rviz REQUIRED)
+
 
 catkin_package()
 
@@ -22,21 +23,18 @@ function(add_dart_example target_name)
     "${PROJECT_NAME}_herb"
     ${DART_LIBRARIES}
     ${aikido_LIBRARIES}
-    ${aikido_rviz_LIBRARIES}
   )
 endfunction()
 
 include_directories(SYSTEM
   ${DART_INCLUDE_DIRS}
   ${aikido_INCLUDE_DIRS}
-  ${aikido_rviz_INCLUDE_DIRS}
 )
 
 add_library("${PROJECT_NAME}_herb" src/herb.cpp)
 target_link_libraries("${PROJECT_NAME}_herb"
   ${DART_LIBRARIES}
   ${aikido_LIBRARIES}
-  ${aikido_rviz_LIBRARIES}
 )
 
 add_dart_example(load_urdf src/load_urdf.cpp)
