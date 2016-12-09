@@ -1,6 +1,6 @@
 #include <iostream>
 #include <dart/dart.h>
-#include <dart/utils/KinBodyParser.h>
+#include <aikido/util/KinBodyParser.h>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/util/CatkinResourceRetriever.hpp>
 
@@ -18,11 +18,10 @@ int main(int argc, char** argv)
 
   const std::string kinBodyPath(argv[1]);
 
-  /*
-  // Resolves package:// URIs by emulating the behavior of 'catkin_find'.
   const auto resourceRetriever
     = std::make_shared<aikido::util::CatkinResourceRetriever>();
 
+  /*
   // Load the HERB URDF model as a Skeleton.
   dart::utils::DartLoader urdfLoader;
   const dart::dynamics::SkeletonPtr skeleton = urdfLoader.parseSkeleton(
@@ -30,7 +29,7 @@ int main(int argc, char** argv)
   */
 
   const dart::dynamics::SkeletonPtr skeleton = 
-            dart::utils::KinBodyParser::readKinBodyXMLFile(kinBodyPath);
+            aikido::util::KinBodyParser::readKinBodyXMLFile(kinBodyPath,resourceRetriever);
   if (!skeleton)
   {
     std::cerr << "Failed loading Kinbody from '" << kinBodyPath << "'\n";

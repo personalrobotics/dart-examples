@@ -32,15 +32,15 @@ target_link_libraries(load_urdf
   ${ASSIMP_LIBRARIES}
 )
 
-#add_executable(load_kinbody
-#  src/load_kinbody.cpp
-#)
-#target_link_libraries(load_kinbody
-#  ${DART_LIBRARIES}
-#  ${aikido_LIBRARIES}
-#  ${catkin_LIBRARIES}
-#  ${ASSIMP_LIBRARIES}
-#)
+add_executable(load_kinbody
+  src/load_kinbody.cpp
+)
+target_link_libraries(load_kinbody
+  ${DART_LIBRARIES}
+  ${aikido_LIBRARIES}
+  ${catkin_LIBRARIES}
+  ${ASSIMP_LIBRARIES}
+)
 
 install(TARGETS load_urdf
   RUNTIME DESTINATION "bin"
