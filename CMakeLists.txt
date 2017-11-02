@@ -3,7 +3,7 @@ project(dart_examples)
 
 find_package(catkin REQUIRED)
 find_package(DART 6.3 REQUIRED utils)
-find_package(aikido 0.0.2 REQUIRED
+find_package(aikido 0.2.0 REQUIRED
   COMPONENTS
     common
     constraint
