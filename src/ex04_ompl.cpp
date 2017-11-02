@@ -8,6 +8,7 @@ using aikido::rviz::InteractiveMarkerViewer;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
 
 static const std::string topicName{"dart_markers"};
+static const std::string baseFrameName{"map"};
 static const double planningTimeout{60.};
 
 int main(int argc, char **argv) {
@@ -32,7 +33,7 @@ int main(int argc, char **argv) {
 
   ros::init(argc, argv, "ex04_ompl");
 
-  InteractiveMarkerViewer viewer(topicName);
+  InteractiveMarkerViewer viewer(topicName, baseFrameName);
   viewer.addSkeleton(robot.getSkeleton());
   viewer.setAutoUpdate(true);
 

@@ -4,17 +4,18 @@
 #include <aikido/constraint/TSR.hpp>
 #include <aikido/rviz/InteractiveMarkerViewer.hpp>
 #include <aikido/statespace/dart/MetaSkeletonStateSpace.hpp>
-#include <aikido/util/RNG.hpp>
+#include <aikido/common/RNG.hpp>
 
 using aikido::constraint::TSR;
 using aikido::rviz::InteractiveMarkerViewer;
 using aikido::statespace::dart::MetaSkeletonStateSpace;
-using aikido::util::RNGWrapper;
+using aikido::common::RNGWrapper;
 using dart::common::make_unique;
 
-static const std::string topicName { "dart_markers" };
-static const double planningTimeout { 10. };
-static const int maxNumIkTrials { 10 };
+static const std::string topicName{"dart_markers"};
+static const std::string baseFrameName{"map"};
+static const double planningTimeout{10.};
+static const int maxNumIkTrials{10};
 
 int main(int argc, char** argv)
 {
@@ -43,7 +44,7 @@ int main(int argc, char** argv)
 
   ros::init(argc, argv, "ex03_ompl");
 
-  InteractiveMarkerViewer viewer(topicName);
+  InteractiveMarkerViewer viewer(topicName, baseFrameName);
   viewer.addSkeleton(robot.getSkeleton());
   viewer.setAutoUpdate(true);
 

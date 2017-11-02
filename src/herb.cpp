@@ -12,9 +12,9 @@
 #include <aikido/planner/ompl/CRRTConnect.hpp>
 #include <aikido/planner/ompl/Planner.hpp>
 #include <aikido/statespace/GeodesicInterpolator.hpp>
-#include <aikido/util/CatkinResourceRetriever.hpp>
-#include <aikido/util/RNG.hpp>
-#include <aikido/util/StepSequence.hpp>
+#include <aikido/io/CatkinResourceRetriever.hpp>
+#include <aikido/common/RNG.hpp>
+#include <aikido/common/StepSequence.hpp>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <dart/utils/urdf/DartLoader.hpp>
 
@@ -39,10 +39,10 @@ using aikido::statespace::GeodesicInterpolator;
 using aikido::statespace::dart::MetaSkeletonStateSpacePtr;
 using aikido::trajectory::InterpolatedPtr;
 using aikido::trajectory::TrajectoryPtr;
-using aikido::util::CatkinResourceRetriever;
-using aikido::util::RNGWrapper;
-using aikido::util::splitEngine;
-using aikido::util::StepSequence;
+using aikido::io::CatkinResourceRetriever;
+using aikido::common::RNGWrapper;
+using aikido::common::cloneRNGsFrom;
+using aikido::common::StepSequence;
 using dart::collision::FCLCollisionDetector;
 using dart::common::make_unique;
 using dart::dynamics::BodyNodePtr;
@@ -139,10 +139,9 @@ InterpolatedPtr Herb::planToTSR(MetaSkeletonStateSpacePtr _space,
                                 double _timelimit) const {
   auto startState = _space->getScopedStateFromMetaSkeleton();
 
-
   std::random_device randomDevice;
   auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
-  auto engines = splitEngine(seedEngine, 2);
+  auto engines = cloneRNGsFrom(seedEngine, 2);
 
   auto untimedTrajectory = planOMPL<ompl::geometric::RRTConnect>(
       startState, 
@@ -175,7 +174,7 @@ InterpolatedPtr Herb::planToEndEffectorOffset(MetaSkeletonStateSpacePtr _space,
 
   std::random_device randomDevice;
   auto seedEngine = RNGWrapper<std::default_random_engine>(randomDevice());
-  auto engines = splitEngine(seedEngine, 2);
+  auto engines = cloneRNGsFrom(seedEngine, 2);
 
   // Generate the constraint TSR
   // Frame w set such that the z-axis is pointing along the direction to move
@@ -240,7 +239,7 @@ void Herb::execute(MetaSkeletonStateSpacePtr _space,
 {
   // TODO: Remove in favor of actual simulated execution
   double stepsize = 0.05;
-  aikido::util::StepSequence seq(stepsize, true, _traj->getStartTime(),
+  aikido::common::StepSequence seq(stepsize, true, _traj->getStartTime(),
                                  _traj->getEndTime());
   auto state = _space->createState();
 
@@ -253,7 +252,7 @@ void Herb::execute(MetaSkeletonStateSpacePtr _space,
 
 std::shared_ptr<NonColliding>
 Herb::getSelfCollisionConstraint(MetaSkeletonStateSpacePtr _space) const {
-  mRobot->enableSelfCollision(false);
+  mRobot->enableSelfCollisionCheck();
 
   // TODO: Load this from HERB's SRDF file.
   std::vector<std::string> disableCollisions {
@@ -263,7 +262,6 @@ Herb::getSelfCollisionConstraint(MetaSkeletonStateSpacePtr _space) const {
     "/right/wam1",
     "/left/wam6",
     "/right/wam6",
-    "/head/wam2"
   };
   for (const auto& bodyNodeName : disableCollisions)
     mRobot->getBodyNode(bodyNodeName)->setCollidable(false);
