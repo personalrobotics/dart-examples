@@ -2,15 +2,22 @@ cmake_minimum_required(VERSION 2.8.8)
 project(dart_examples)
 
 find_package(catkin REQUIRED)
-find_package(DART REQUIRED utils-urdf)
-find_package(aikido REQUIRED COMPONENTS
-  constraint
-  distance
-  planner_ompl
-  planner_parabolic
-  rviz
-  statespace
-  util)
+find_package(DART 6.3 REQUIRED utils)
+find_package(aikido 0.2.0 REQUIRED
+  COMPONENTS
+    common
+    constraint
+    control
+    control_ros
+    distance
+    io
+    perception
+    planner_ompl
+    planner_parabolic
+    planner_vectorfield
+    rviz
+    statespace
+)
 
 catkin_package()
 
